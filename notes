@@ -1,0 +1,10 @@
+
+Iphone : 48kHz max samlping rate
+
+From 10kHz : drops - 17kHz limit
+
+
+Timing sincronisation : with noise , it is less pecise ... (small offset from real world)
+
+
+Use peak - to noise ratio for timing
