@@ -1,20 +1,22 @@
-
-
-
+import Demodulator
+from scipy.signal import fftconvolve
 import matplotlib.pyplot as plt
 import Synchronisation
 import numpy as np
+import utils
 #more complicated class than transmitter
 
 
 
 class SimpleReceiver():
     #we get the modulator since it helps us a bit
-    def __init__(self, config, modulator):
+    def __init__(self, config, modulator, demodulator):
         self.config = config
         self.modulator = modulator
         self.bufferSize = 4*config['payloadSamples']
+        #self.incomingData =  utils.RingBuffer(self.bufferSize)
         self.incomingData = np.zeros(self.bufferSize)  #could be more but not less
+
         self.processingBuffer = np.zeros(config['payloadSamples'])
 
         self.timeSynchroniser = Synchronisation.TimeSynchroniser(config, modulator)
@@ -24,17 +26,27 @@ class SimpleReceiver():
         self.state = 'IDLE'
         self.waitingSamples = 0
         self.grabbedSamples = 0
+
+        self.demodulator = demodulator
+
+        self.preambleLenght = len(modulator.getBasebandPreamble())
+
         
     
     def pushWindow(self, newData):
 
+
         downconverted = self.modulator.downConvert(newData) 
+        #downconverted=newData
 
+        #self.incomingData.write(downconverted)
         self.incomingData = np.append(self.incomingData, downconverted)
-
         toRemove = len(self.incomingData) - self.bufferSize
+
         if(toRemove > 0):
-            self.incomingData = self.incomingData[:toRemove]
+            self.incomingData = self.incomingData[toRemove:]
+
+
 
         match self.state:
             case 'IDLE':
@@ -60,7 +72,7 @@ class SimpleReceiver():
                     sigEnd = preambuleIndex + self.config['payloadSamples']
                     self.processingBuffer = self.incomingData[sigStart:sigEnd]
 
-                    self.incomingData = self.incomingData[:sigEnd]
+                    self.incomingData = self.incomingData[sigEnd:]
 
                     self.processPayload()
 
@@ -105,6 +117,12 @@ class SimpleReceiver():
         print('Processing packet')
 
         phaseSync = self.phaseSynchroniser.synchronisePhase(self.processingBuffer)
+
+        #we remove the preamble
+
+        phaseSync = phaseSync[self.preambleLenght:]
+
+        self.demodulator.demodulate(phaseSync)
         
         plt.plot(self.processingBuffer, 'r')
         plt.plot(phaseSync, 'b')

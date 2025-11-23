@@ -2,11 +2,12 @@ import math
 import utils
 from abc import ABC
 import numpy as np
-from scipy.signal import lfilter, firwin
+from scipy.signal import lfilter, firwin, fftconvolve
+from scipy.signal import lfilter_zi
 
 
 
-class Modulator(ABC):
+class Modulator():
     def __init__(self, config, pulse, constellation):
         self.config = config
         self.pulse = pulse
@@ -17,28 +18,36 @@ class Modulator(ABC):
         self.window = config['windowLenghtSymbols']
         self.constellation = constellation
 
+
+        cutoff = (1 + self.config['lpCutoffEpsilon']) * self.config['bandwidth']
+
+        self.numtaps=129
+        self.taps = firwin(self.numtaps, cutoff / (config['FS'] / 2))
+
+        #for the downconverter
+        self.lpf_state = lfilter_zi(self.taps, 1) * 0
+
+
     def getBasebandPreamble(self):
         baseband, passband = self.modulateWindow([], force=True)
         return baseband
 
    
-    def downConvert(self, data, numtaps=129): #odd number of taps 
+    def downConvert(self, data): #odd number of taps 
 
         fs = self.config['FS']
         fc = self.config['FC']
-        cutoff = (1 + self.config['lpCutoffEpsilon']) * self.config['bandwidth']
 
         t = np.arange(len(data)) / fs
         sb = data * np.exp(-2j * np.pi * fc * t)
-
         # low pass filter
-        taps = firwin(numtaps, cutoff / (fs / 2))
 
-        filtered = lfilter(taps, 1.0, sb)
+        filtered, self.lpf_state = lfilter(self.taps, 1, sb, zi=self.lpf_state)
+        #filtered = fftconvolve(sb, self.taps, mode='full')
 
-        # phase compensation
-        delay = (numtaps - 1) // 2
-        filtered = filtered[delay:]
+        # delay compensation
+        #delay = (self.numtaps - 1) // 2
+        #filtered = filtered[delay:]
 
         return  filtered * np.sqrt(2)
 
@@ -115,6 +124,33 @@ class QAM(Constellation):
 
     def map(self, values):
         return [self.constellation[v] for v in values]
+
+
+    
+    def demap(self, values, return_bits=True, return_bytes=False):
+        """
+        Demodulate received symbols to indices, bits, or byte string.
+        """
+        values = np.atleast_1d(values)
+        # closest constellation index
+        idx = np.argmin(np.abs(values[:, None] - self.constellation[None, :])**2, axis=1)
+    
+        if not (return_bits or return_bytes):
+            return idx
+    
+        # bits per symbol
+        bps = int(np.log2(self.M))
+        bits = ((idx[:, None] & (1 << np.arange(bps)[::-1])) > 0).astype(int)
+    
+        if return_bytes:
+            bits_flat = bits.flatten()
+            pad = (-len(bits_flat)) % 8
+            if pad > 0:
+                bits_flat = np.concatenate([bits_flat, np.zeros(pad, dtype=int)])
+            byte_str = bytes(np.packbits(bits_flat)).decode(errors='ignore')
+            return idx, bits, byte_str
+    
+        return idx, bits
 
 
 

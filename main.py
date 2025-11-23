@@ -1,3 +1,4 @@
+import Demodulator
 import Receiver
 import sounddevice as sd
 import numpy as np
@@ -41,10 +42,11 @@ constellation = Modulator.QAM(16)
 
 
 mod = Modulator.Modulator(config, pulse, constellation)
+demod = Demodulator.Demodulator(config, pulse, constellation)
 
 baseband, passband = mod.modulateWindow(payload)
 
-#downed = mod.downConvert(passband)
+downed = mod.downConvert(passband)
 
 #plt.plot(baseband, 'g')
 #plt.plot(downed, 'r')
@@ -54,24 +56,14 @@ preambule = mod.getBasebandPreamble()
 
 energyPreambule = np.sum(np.abs(preambule)**2)
 
-signal = np.concatenate([ [0] * config['FS'],  passband, [0] * config['FS'] * 2], dtype=np.complex128)
-
-N0 = 0.1
-
+N0 = 0
 SNR = energyPreambule / N0
 
 SNRdb = 10 * np.log10(SNR)
 
 print("SNR : ", SNR, " db.")
 
-signal = signal + np.random.normal(loc=0, scale=N0/2, size=len(signal)) + 1j * np.random.normal(loc=0, scale=N0/2, size=len(signal))
-
-downed = mod.downConvert(signal)
-
-#Syncronisation.simpleDelayEstimator(mod, downed, trueStart= config['FS'] )
-
-
-rcv = Receiver.SimpleReceiver(config, mod)
+rcv = Receiver.SimpleReceiver(config, mod, demod)
 
 print(len(passband))
 print(config['payloadSamples'])

@@ -8,5 +8,3 @@ def generatePreambleBits(nbSymbols, bitsPerSymbol):
     return preambleBits
 
 
-
-
