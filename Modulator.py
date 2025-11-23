@@ -1,6 +1,10 @@
+import math
 import utils
 from abc import ABC
 import numpy as np
+from scipy.signal import lfilter, firwin
+
+
 
 class Modulator(ABC):
     def __init__(self, config, pulse, constellation):
@@ -16,6 +20,28 @@ class Modulator(ABC):
     def getBasebandPreamble(self):
         baseband, passband = self.modulateWindow([], force=True)
         return baseband
+
+   
+    def downConvert(self, data, numtaps=129): #odd number of taps 
+
+        fs = self.config['FS']
+        fc = self.config['FC']
+        cutoff = (1 + self.config['lpCutoffEpsilon']) * self.config['bandwidth']
+
+        t = np.arange(len(data)) / fs
+        sb = data * np.exp(-2j * np.pi * fc * t)
+
+        # low pass filter
+        taps = firwin(numtaps, cutoff / (fs / 2))
+
+        filtered = lfilter(taps, 1.0, sb)
+
+        # phase compensation
+        delay = (numtaps - 1) // 2
+        filtered = filtered[delay:]
+
+        return  filtered * np.sqrt(2)
+
 
 
 
@@ -59,7 +85,7 @@ class Modulator(ABC):
         #upconvert
         t = np.arange(len(baseband)) / fs
 
-        passband = np.real(baseband * np.exp(2j * np.pi * fc * t))
+        passband = np.sqrt(2) *  np.real(baseband * np.exp(2j * np.pi * fc * t))
 
         return baseband, passband
                 
