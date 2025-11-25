@@ -1,3 +1,4 @@
+from scipy.signal import fftconvolve
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -47,9 +48,9 @@ class TimeSynchroniser():
     def getPreambuleStartIndex(self, signal):
         #get energy of signal
 
-        E_r = np.convolve(np.abs(signal)**2, np.ones(self.M), mode='full')
+        E_r = fftconvolve(np.abs(signal)**2, np.ones(self.M), mode='full')
 
-        corr = np.convolve(signal, self.preambuleMF, mode='full')
+        corr = fftconvolve(signal, self.preambuleMF, mode='full')
 
         corr_mag = np.abs(corr)
 

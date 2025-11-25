@@ -21,7 +21,13 @@ class Demodulator():
 
         _, bits = self.constellation.demap(symbols)
 
+        bits = bits[  len(bits) - self.config['windowLenghtSymbols']:]
+
+        #we skip the preambule bits 
         bits = bits.flatten()
+
+
+
         bytes_array = np.packbits(bits)
         print(bytes(bytes_array).decode(errors='ignore'))
 
