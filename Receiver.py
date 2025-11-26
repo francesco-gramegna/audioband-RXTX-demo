@@ -99,7 +99,7 @@ class SimpleReceiver():
 
                 #print("corr time : ", time.time() - stime)
 
-                print(peak)
+                #print(peak)
                 if (preambuleIndex != -1):
                     self.state = 'POTENTIAL_PACKET'
             
@@ -109,14 +109,14 @@ class SimpleReceiver():
                 if (preambuleIndex == -1):
                     #the packet was a false negative probably
                     self.state ='IDLE'
-                    print('Lost packet')
+                    #print('Lost packet')
                 else:
                     #we can decode
-                    print("YES")
                     self.state = 'IDLE'
 
                     sigStart = preambuleIndex
                     sigEnd = preambuleIndex + self.config['payloadSamples']
+                    #print(sigStart , " " , sigEnd)
                     self.processingBuffer = self.incomingData[sigStart:sigEnd]
 
                     self.incomingData = self.incomingData[sigEnd:]
@@ -125,9 +125,9 @@ class SimpleReceiver():
 
 
     def processPayload(self):
-        print('Processing packet')
+        #print('Processing packet')
 
-        print(" len buf : " , len(self.processingBuffer))
+        #print(" len buf : " , len(self.processingBuffer))
         phaseSync = self.phaseSynchroniser.synchronisePhase(self.processingBuffer)
 
         #we remove the preamble

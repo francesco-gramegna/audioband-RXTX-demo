@@ -22,14 +22,14 @@ class Demodulator():
 
         
 
-        print(" Got " , len(symbols) , "symbols")
+        #print(" Got " , len(symbols) , "symbols")
 
         trueSymbols = np.load("symbols.npy")
 
         trueSymbols = trueSymbols[self.config['preambleSymbols']:]
 
         symbols = symbols * 10
-        symbols = symbols[self.config['preambleSymbols']:]
+        symbols = symbols[self.config['preambleSymbols']:][: self.config['windowLenghtSymbols']]
 
         #pick the closest to the constellation 
 
@@ -41,6 +41,7 @@ class Demodulator():
         print(bytes(bytes_array).decode(errors='ignore'))
 
 
+        """
         plt.plot(symbols.real, 'b')
         plt.plot(symbols.imag, 'r')
 
@@ -51,6 +52,7 @@ class Demodulator():
         #plt.scatter(trueSymbols.real, trueSymbols.imag, c='g')
         plt.grid(True)
         plt.show()
+        """
 
 
         return bits

@@ -60,12 +60,33 @@ class TimeSynchroniser():
         t_peak = np.argmax(rho)
 
 
-
         #check if the peak is bigger than our threshold 
         if (rho[t_peak] >= self.config['corrRatioThresh']):
-            print('Detected preambule')
-            t_start = t_peak - (self.M - 1)
 
+            # now take all of those who are 5 % similar  to the max of them (arbitrary)
+            max_peak_index =  t_peak
+            max_peak_value = rho[max_peak_index]
+            potential_starts = []
+            tempRho = rho.copy()
+            while(len(potential_starts) < len(tempRho)):
+        
+                t_peak = np.argmax(tempRho)
+                if(t_peak - (self.M - 1) < 0):
+                    #previous peak , we skip it
+                    tempRho[t_peak] = 0
+                    continue
+
+                if(tempRho[t_peak] < 0.95 * max_peak_value):
+                    break
+        
+                potential_starts.append(t_peak)
+                tempRho[t_peak] = 0
+        
+            t_peak = min(potential_starts)
+                    
+            #print('Detected preambule')
+            t_start = t_peak - (self.M - 1)
+        
             return t_start, rho[t_peak]
         return -1, rho[t_peak]
 
@@ -88,7 +109,7 @@ class MLPhaseSynchroniser():
         peak_index = self.M - 1 #trusting that the synchronisation went well
 
         phase = np.angle(corr)
-        print("Phase offset : " , phase[peak_index])
+        #print("Phase offset : " , phase[peak_index])
         
         return phase[peak_index]
 

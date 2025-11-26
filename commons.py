@@ -11,15 +11,15 @@ import plots
 class Common():
 
     config = {'FS' : 48000,
-              'FC' : 500,
-              'RS' : 40,
-              'preambleSymbols' : 10,
-              'windowLenghtSymbols' : 16,
+              'FC' : 1500,
+              'RS' : 500,
+              'preambleSymbols' : 20,
+              'windowLenghtSymbols' : 64,
               'corrRatioThresh' : 0.5, #very very low snr
-              'excessBandwidth': 0.25,
+              'excessBandwidth': 0.30,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,
-              'Eb': 100
+              'Eb': 200
               }
     
     pulse = mathUtils.rrc_pulse(config['FS'], config['RS'], alpha=0.25)
