@@ -108,16 +108,28 @@ class Constellation(ABC):
         pass
 
 
+
+#ai generated
 class QAM(Constellation):
-    def __init__(self, M):
+    def __init__(self, M, Eb=None):
         self.M = M
+        self.bps = int(np.log2(M))
+
         sqrtM = int(np.sqrt(M))
         if sqrtM**2 != M:
             raise ValueError("M must be a perfect square")
+
         levels = np.arange(-sqrtM+1, sqrtM, 2)
         self.constellation = np.array([x + 1j*y for y in reversed(levels) for x in levels])
+
+        # Normalize to Es = 1
         self.constellation /= np.sqrt(np.mean(np.abs(self.constellation)**2))
 
+        # Set Eb (default Eb = 1/bps)
+        self.Eb = (1 / self.bps) if Eb is None else Eb
+
+        # Scale so Es = Eb * log2(M)
+        self.constellation *= np.sqrt(self.Eb * self.bps)
     def symbol(self, index):
         """Map integer 0..M-1 to constellation point."""
         return self.constellation[index]

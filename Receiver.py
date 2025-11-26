@@ -1,3 +1,5 @@
+import mathUtils
+from commons import Common
 import multiprocessing
 import threading
 import time
@@ -35,10 +37,27 @@ class SimpleReceiver():
 
         self.preambleLenght = len(modulator.getBasebandPreamble())
 
+        self.agc = mathUtils.SimpleAGC(1, 0.05)
+
+        #plotting
+        plt.ion()  # interactive mode on
+        self.fig, self.ax = plt.subplots()
+        self.line, = self.ax.plot(np.zeros(self.bufferSize))  # initial empty line
+        self.ax.set_ylim(-1.5, 1.5)  # adjust depending on expected amplitude
+        self.ax.set_xlim(0, self.bufferSize)
+
+        self.plot_buffer = np.zeros(self.bufferSize)
+
+
         
     
     def pushWindow(self, newData):
 
+        #AGC maybe
+        #newData = self.agc.process(newData)
+        #newData.flatten()
+        #newData = newData * 1000
+        #print(np.max(newData))
 
         stime = time.time()
         downconverted = self.modulator.downConvert(newData) 
@@ -53,6 +72,23 @@ class SimpleReceiver():
 
         if(toRemove > 0):
             self.incomingData = self.incomingData[toRemove:]
+
+
+        # ---- LIVE PLOT UPDATE ----
+
+        """
+        self.plot_buffer = np.roll(self.plot_buffer, -len(newData))
+        self.plot_buffer[-len(newData):] = newData
+        self.line.set_ydata(self.plot_buffer)
+        self.ax.relim()
+        self.ax.autoscale_view(scaley=True)  # COMMENT OUT IF YOU WANT FIXED SCALE
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
+        """
+
+        #return
+
+
 
         #print("DATA time : ", time.time() - stime)
 
@@ -98,7 +134,8 @@ class SimpleReceiver():
 
         self.demodulator.demodulate(phaseSync)
         
-        plt.plot(self.processingBuffer, 'r')
+        #plt.plot(self.processingBuffer.real, 'r')
+        #plt.plot(self.processingBuffer.imag, 'g')
         plt.plot(phaseSync, 'b')
         plt.show()
 
@@ -188,10 +225,22 @@ class AudioReceiver():
 
 
     def listen(self):
+        
+        pipewire_output = None
+        for idx, dev in enumerate(sd.query_devices()):
+            if "pipewire" in dev['name'].lower() or "pulse" in dev['name'].lower():
+                pipewire_output = idx
+                print("yay")
+                break
+
+        sd.default.device = pipewire_output
+
+
         proc, q = self.start_worker()
         self.q = q
 
         with sd.InputStream(
+            device=None,
             blocksize=2048,
             samplerate=self.config['FS'],
             channels=1,      
@@ -206,6 +255,21 @@ class AudioReceiver():
                     time.sleep(0.05)
             except KeyboardInterrupt:
                 print("Stopping...")
+
+
+def main():
+    mod = Common.mod
+    demod = Common.demod
+    config = Common.config
+
+    rcv = SimpleReceiver(config, mod, demod)
+
+    audioMachine = AudioReceiver(config, rcv)
+    audioMachine.listen()
+
+
+if __name__ == "__main__":
+    main()
 
 
 

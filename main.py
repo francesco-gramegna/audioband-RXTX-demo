@@ -17,10 +17,10 @@ if __name__ == "__main__":
     
     
     config = {'FS' : 48000,
-              'FC' : 900,
-              'RS' : 100,
-              'preambleSymbols' : 10,
-              'windowLenghtSymbols' : 24,
+              'FC' : 500,
+              'RS' : 20,
+              'preambleSymbols' : 30,
+              'windowLenghtSymbols' : 30,
               'corrRatioThresh' : 0.3, #very very low snr
               'excessBandwidth': 0.25,
               'lpCutoffEpsilon': 0.05,
@@ -48,6 +48,7 @@ if __name__ == "__main__":
     
     mod = Modulator.Modulator(config, pulse, constellation)
     demod = Demodulator.Demodulator(config, pulse, constellation)
+    """
     
     baseband, passband = mod.modulateWindow(payload)
     
@@ -93,10 +94,13 @@ if __name__ == "__main__":
     
     #sd.play(signal.real, config['FS'])
     #sd.wait()
+    """
     
     
     #rcv.listen()
     
+
+    rcv = Receiver.SimpleReceiver(config, mod, demod)
     realRCV = Receiver.AudioReceiver(config, rcv)
     
     realRCV.listen()

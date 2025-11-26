@@ -55,8 +55,11 @@ class TimeSynchroniser():
         corr_mag = np.abs(corr)
 
         rho = corr_mag / np.sqrt(self.E_h * np.maximum(E_r, 1e-12))
+        #rho = corr_mag
 
         t_peak = np.argmax(rho)
+
+
 
         #check if the peak is bigger than our threshold 
         if (rho[t_peak] >= self.config['corrRatioThresh']):
@@ -64,7 +67,6 @@ class TimeSynchroniser():
             t_start = t_peak - (self.M - 1)
 
             return t_start, rho[t_peak]
-
         return -1, rho[t_peak]
 
 
