@@ -12,14 +12,14 @@ class Common():
 
     config = {'FS' : 48000,
               'FC' : 500,
-              'RS' : 20,
-              'preambleSymbols' : 30,
-              'windowLenghtSymbols' : 30,
+              'RS' : 40,
+              'preambleSymbols' : 10,
+              'windowLenghtSymbols' : 16,
               'corrRatioThresh' : 0.5, #very very low snr
               'excessBandwidth': 0.25,
               'lpCutoffEpsilon': 0.05,
-              'bitsPerSymbol' : 4,
-              'Eb': 5
+              'bitsPerSymbol' : 2,
+              'Eb': 100
               }
     
     pulse = mathUtils.rrc_pulse(config['FS'], config['RS'], alpha=0.25)
@@ -35,9 +35,10 @@ class Common():
     
     config['bandwidth'] = (1 + config['excessBandwidth'])*config['Bmin']
     
-    constellation = Modulator.QAM(16, config['Eb'])
+    constellation = Modulator.QAM(4, config['Eb'])
     
     mod = Modulator.Modulator(config, pulse, constellation)
     demod = Demodulator.Demodulator(config, pulse, constellation)
    
 
+print("Using : ", Common.config)

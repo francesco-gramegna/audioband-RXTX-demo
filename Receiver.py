@@ -40,13 +40,13 @@ class SimpleReceiver():
         self.agc = mathUtils.SimpleAGC(1, 0.05)
 
         #plotting
-        plt.ion()  # interactive mode on
-        self.fig, self.ax = plt.subplots()
-        self.line, = self.ax.plot(np.zeros(self.bufferSize))  # initial empty line
-        self.ax.set_ylim(-1.5, 1.5)  # adjust depending on expected amplitude
-        self.ax.set_xlim(0, self.bufferSize)
+        #plt.ion()  # interactive mode on
+        #self.fig, self.ax = plt.subplots()
+        #self.line, = self.ax.plot(np.zeros(self.bufferSize))  # initial empty line
+        #self.ax.set_ylim(-1.5, 1.5)  # adjust depending on expected amplitude
+        #self.ax.set_xlim(0, self.bufferSize)
 
-        self.plot_buffer = np.zeros(self.bufferSize)
+        #self.plot_buffer = np.zeros(self.bufferSize)
 
 
         
@@ -127,6 +127,7 @@ class SimpleReceiver():
     def processPayload(self):
         print('Processing packet')
 
+        print(" len buf : " , len(self.processingBuffer))
         phaseSync = self.phaseSynchroniser.synchronisePhase(self.processingBuffer)
 
         #we remove the preamble
@@ -136,37 +137,11 @@ class SimpleReceiver():
         
         #plt.plot(self.processingBuffer.real, 'r')
         #plt.plot(self.processingBuffer.imag, 'g')
-        plt.plot(phaseSync, 'b')
-        plt.show()
+        #plt.plot(phaseSync.real, 'b')
+        #plt.plot(phaseSync.imag, 'r')
+        #plt.show()
 
         return
-
-
-    def audio_callback(self,indata, frames, time, status):
-        print("pushing")
-        if status:
-            print("stat : " , status)
-
-        self.pushWindow(indata.flatten())        
-        #print('finished pushing')
-
-    def listen(self):
-
-        with sd.InputStream(
-            blocksize=2048,
-            samplerate=self.config['FS'],
-            channels=1,      
-            dtype='float32',
-            latency="high",
-            callback=self.audio_callback):
-
-            print(self.config['payloadSamples'])
-            print("Recording in MONO... press Ctrl+C to stop.")
-            try:
-                while True: 
-                    time.sleep(0.05)
-            except KeyboardInterrupt:
-                print("Stopping...")
 
 
 

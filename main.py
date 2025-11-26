@@ -24,7 +24,7 @@ if __name__ == "__main__":
               'corrRatioThresh' : 0.3, #very very low snr
               'excessBandwidth': 0.25,
               'lpCutoffEpsilon': 0.05,
-              'bitsPerSymbol' : 4
+              'bitsPerSymbol' : 2
               }
     
     pulse = mathUtils.rrc_pulse(config['FS'], config['RS'], alpha=0.25)
