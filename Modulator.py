@@ -32,6 +32,11 @@ class Modulator():
         baseband, passband = self.modulateWindow([], force=True)
         return baseband
 
+    def getPassbandPreamble(self):
+        baseband, passband = self.modulateWindow([], force=True)
+        return passband
+
+
    
     def downConvert(self, data): #odd number of taps 
 

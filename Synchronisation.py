@@ -129,3 +129,24 @@ class MLPhaseSynchroniser():
         return corrected
 
     
+class MLFreqPhaseSynchroniser():
+    def __init__(self, config, modulator):
+        self.config = config
+        self.preamble = modulator.getBasebandPreamble()
+        self.M = len(self.preamble)
+
+    def estimate_freq(self, seg):
+        return np.angle(np.sum(seg * np.conj(self.preamble))) / self.M
+
+    def estimate_phase(self, seg):
+        return np.angle(np.sum(seg * np.conj(self.preamble)))
+
+    def synchronise(self, signal):
+        seg = signal[:self.M]
+        f = self.estimate_freq(seg)                     # ML freq in rads
+        n = np.arange(len(signal))
+        sig_f_corr = signal * np.exp(-1j * f * n)       # remove linear phase
+        phase = self.estimate_phase(sig_f_corr[:self.M])# residual phase
+        corrected = sig_f_corr * np.exp(-1j * phase)    # remove phase
+        return corrected
+

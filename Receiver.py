@@ -1,3 +1,5 @@
+import Equalisation
+import EnvAnalysis
 import mathUtils
 from commons import Common
 import multiprocessing
@@ -21,6 +23,9 @@ class SimpleReceiver():
         self.modulator = modulator
         self.bufferSize = 4*config['payloadSamples']
         #self.incomingData =  utils.RingBuffer(self.bufferSize)
+        
+        self.preambule = modulator.getBasebandPreamble()
+
         self.incomingData = np.zeros(self.bufferSize)  #could be more but not less
 
         self.processingBuffer = np.zeros(config['payloadSamples'])
@@ -28,6 +33,8 @@ class SimpleReceiver():
         self.timeSynchroniser = Synchronisation.TimeSynchroniser(config, modulator)
 
         self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, modulator)
+
+        self.channelEst = Equalisation.ChannelEstimator(config, modulator, len(self.preambule)//2)
 
         self.state = 'IDLE'
         self.waitingSamples = 0
@@ -38,6 +45,8 @@ class SimpleReceiver():
         self.preambleLenght = len(modulator.getBasebandPreamble())
 
         self.agc = mathUtils.SimpleAGC(1, 0.05)
+
+        self.snrEstimator = EnvAnalysis.snrEstimator(config)
 
         #plotting
         #plt.ion()  # interactive mode on
@@ -65,6 +74,16 @@ class SimpleReceiver():
         #print("DC time : ", time.time() - stime)
         stime = time.time()
         #downconverted=newData
+
+        #PSD computations
+
+        """
+        self.snrEstimator.pushData(downconverted, noise=True)
+        fX, noisePSD = self.snrEstimator.getNoisePSD()
+        plt.plot(fX, noisePSD, 'r')
+        plt.show()
+        """
+
 
         #self.incomingData.write(downconverted)
         self.incomingData = np.append(self.incomingData, downconverted)
@@ -131,6 +150,13 @@ class SimpleReceiver():
 
         #print(" len buf : " , len(self.processingBuffer))
         phaseSync = self.phaseSynchroniser.synchronisePhase(self.processingBuffer)
+
+        #estimate phase
+
+        h = self.channelEst.estimateChannel(phaseSync)
+
+        plt.plot(h)
+        plt.show()
 
         #we remove the preamble
         #phaseSync = phaseSync[self.preambleLenght:]

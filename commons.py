@@ -11,10 +11,10 @@ import plots
 class Common():
 
     config = {'FS' : 48000,
-              'FC' : 800,
+              'FC' : 700,
               'RS' : 50,
-              'preambleSymbols' : 5,
-              'windowLenghtSymbols' : 100,
+              'preambleSymbols' : 25,
+              'windowLenghtSymbols' : 8,
               'corrRatioThresh' : 0.45, #very very low snr
               'excessBandwidth': 0.50,
               'lpCutoffEpsilon': 0.05,
@@ -29,7 +29,7 @@ class Common():
     #auto definitions
     config['samplesPerSymbol'] = config['FS'] // config['RS']
     
-    config['payloadSamples'] = (config['preambleSymbols'] + config['windowLenghtSymbols']) * config['samplesPerSymbol'] #+  len(pulse) - 1
+    config['payloadSamples'] = (config['preambleSymbols'] + config['windowLenghtSymbols']) * config['samplesPerSymbol']  +  len(pulse) - 1
     
     config['Bmin'] = config['RS']
     

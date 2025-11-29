@@ -1,4 +1,5 @@
 #code made by ai
+
 #!/usr/bin/env python3
 import http.server
 import socketserver
@@ -8,12 +9,9 @@ import os
 import socket
 
 PORT = 8000
-
-# Replace this with your actual Python script path and command
 PYTHON_SCRIPT = "TransmitterScript.py"
 
 def get_local_ip():
-    """Get the local IP address of this machine"""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(('10.255.255.255', 1))
@@ -83,6 +81,7 @@ class WavServerHandler(http.server.SimpleHTTPRequestHandler):
     <h1>Text to WAV Generator</h1>
     <textarea id="textInput" placeholder="Enter your text here..."></textarea>
     <button onclick="generateWav()">Generate WAV</button>
+    <button onclick="generateFrequencySpan()">Generate Frequency Span</button>
     <div id="status"></div>
     <audio id="player" controls style="display:none;"></audio>
 
@@ -93,41 +92,42 @@ class WavServerHandler(http.server.SimpleHTTPRequestHandler):
                 alert('Please enter some text');
                 return;
             }
+            await generateAudio('/generate', 'text=' + encodeURIComponent(text));
+        }
 
-            const button = document.querySelector('button');
+        async function generateFrequencySpan() {
+            await generateAudio('/generate', 'frequency_span=true');
+        }
+
+        async function generateAudio(endpoint, bodyData) {
+            const buttonList = document.querySelectorAll('button');
             const status = document.getElementById('status');
             const player = document.getElementById('player');
             
-            button.disabled = true;
+            buttonList.forEach(btn => btn.disabled = true);
             status.textContent = 'Generating...';
             player.style.display = 'none';
 
             try {
-                const response = await fetch('/generate', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: 'text=' + encodeURIComponent(text)
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: bodyData
                 });
 
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = URL.createObjectURL(blob);
-                    
-                    // Use Web Audio API for bit-perfect playback
+
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                        sampleRate: 48000  // Force 48kHz sample rate
+                        sampleRate: 48000
                     });
-                    
                     const arrayBuffer = await blob.arrayBuffer();
                     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                    
-                    // Verify the sample rate
+
                     console.log('Audio sample rate:', audioBuffer.sampleRate);
                     console.log('Context sample rate:', audioContext.sampleRate);
-                    
-                    // Also set for regular player as fallback
+
                     player.src = url;
                     player.style.display = 'block';
                     status.textContent = `Success! Play your audio below (${audioBuffer.sampleRate}Hz, ${audioBuffer.numberOfChannels}ch)`;
@@ -141,7 +141,7 @@ class WavServerHandler(http.server.SimpleHTTPRequestHandler):
                 status.textContent = 'Error: ' + error.message;
                 status.style.color = 'red';
             } finally {
-                button.disabled = false;
+                buttonList.forEach(btn => btn.disabled = false);
             }
         }
     </script>
@@ -157,28 +157,23 @@ class WavServerHandler(http.server.SimpleHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length).decode('utf-8')
             params = urllib.parse.parse_qs(post_data)
-            text = params.get('text', [''])[0]
 
-            if not text:
-                self.send_error(400, "No text provided")
-                return
+            # Check if this is a frequency span request
+            is_frequency_span = params.get('frequency_span', [''])[0] == 'true'
+            text = params.get('text', [''])[0] if not is_frequency_span else None
 
             try:
-                # Run your Python script with the text as an argument
-                # The script should output a WAV file named 'output.wav'
-                result = subprocess.run(
-                    ['python3', PYTHON_SCRIPT, text],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
+                cmd = ['python3', PYTHON_SCRIPT]
+                if text:
+                    cmd.append(text)
+
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
                 if result.returncode != 0:
                     self.send_error(500, f"Script error: {result.stderr}")
                     return
 
-                # Read the generated WAV file
-                wav_file = 'output.wav'  # Adjust this to match your script's output
+                wav_file = 'output.wav'
                 if not os.path.exists(wav_file):
                     self.send_error(500, "WAV file not generated")
                     return
@@ -186,14 +181,11 @@ class WavServerHandler(http.server.SimpleHTTPRequestHandler):
                 with open(wav_file, 'rb') as f:
                     wav_data = f.read()
 
-                # Send the WAV file back
                 self.send_response(200)
                 self.send_header('Content-type', 'audio/wav')
                 self.send_header('Content-Length', len(wav_data))
                 self.end_headers()
                 self.wfile.write(wav_data)
-
-                # Clean up
                 os.remove(wav_file)
 
             except subprocess.TimeoutExpired:
@@ -203,7 +195,6 @@ class WavServerHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     local_ip = get_local_ip()
-    
     with socketserver.TCPServer(("", PORT), WavServerHandler) as httpd:
         print(f"Server running!")
         print(f"Local access: http://localhost:{PORT}")
@@ -213,3 +204,4 @@ if __name__ == '__main__':
             httpd.serve_forever()
         except KeyboardInterrupt:
             print("\nServer stopped.")
+

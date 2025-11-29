@@ -1,3 +1,4 @@
+import utils
 import sys
 from commons import Common
 from scipy.io.wavfile import write
@@ -13,6 +14,14 @@ import plots
 
 
 def main():
+    
+    config = Common.config
+    mod = Common.mod
+
+    if len(sys.argv) == 1:
+        wave = utils.generateFrequencySpan(config, mod)
+        write("output.wav", config['FS'], wave.astype(np.float32))
+        return
     
     text = sys.argv[1]
 
