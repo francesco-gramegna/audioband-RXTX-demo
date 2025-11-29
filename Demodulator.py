@@ -38,7 +38,7 @@ class Demodulator():
         bits = bits.flatten()
 
         bytes_array = np.packbits(bits)
-        print(bytes(bytes_array).decode(errors='ignore'))
+        print(bytes(bytes_array).decode(errors='ignore'), end="", flush=True)
 
 
         """

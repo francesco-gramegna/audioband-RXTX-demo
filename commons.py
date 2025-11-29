@@ -11,15 +11,15 @@ import plots
 class Common():
 
     config = {'FS' : 48000,
-              'FC' : 1500,
-              'RS' : 500,
-              'preambleSymbols' : 20,
-              'windowLenghtSymbols' : 64,
-              'corrRatioThresh' : 0.5, #very very low snr
-              'excessBandwidth': 0.30,
+              'FC' : 800,
+              'RS' : 50,
+              'preambleSymbols' : 5,
+              'windowLenghtSymbols' : 100,
+              'corrRatioThresh' : 0.45, #very very low snr
+              'excessBandwidth': 0.50,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,
-              'Eb': 200
+              'Eb': 400
               }
     
     pulse = mathUtils.rrc_pulse(config['FS'], config['RS'], alpha=0.25)
@@ -29,7 +29,7 @@ class Common():
     #auto definitions
     config['samplesPerSymbol'] = config['FS'] // config['RS']
     
-    config['payloadSamples'] = (config['preambleSymbols'] + config['windowLenghtSymbols']) * config['samplesPerSymbol'] +  len(pulse) - 1
+    config['payloadSamples'] = (config['preambleSymbols'] + config['windowLenghtSymbols']) * config['samplesPerSymbol'] #+  len(pulse) - 1
     
     config['Bmin'] = config['RS']
     

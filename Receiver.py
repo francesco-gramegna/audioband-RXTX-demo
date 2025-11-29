@@ -73,6 +73,8 @@ class SimpleReceiver():
         if(toRemove > 0):
             self.incomingData = self.incomingData[toRemove:]
 
+        #print(len(self.incomingData))
+
 
         # ---- LIVE PLOT UPDATE ----
 

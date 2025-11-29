@@ -57,7 +57,14 @@ class TimeSynchroniser():
         rho = corr_mag / np.sqrt(self.E_h * np.maximum(E_r, 1e-12))
         #rho = corr_mag
 
-        t_peak = np.argmax(rho)
+        while(True):
+            t_peak = np.argmax(rho)
+            if(t_peak - (self.M - 1) < 0):
+                #previous peak , we skip it
+                rho[t_peak] = 0
+                continue
+            break
+            
 
 
         #check if the peak is bigger than our threshold 

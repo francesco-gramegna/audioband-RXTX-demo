@@ -93,7 +93,7 @@ class Modulator():
         up = np.zeros(len(b) * sps, dtype=np.complex128)
         up[::sps] = b
 
-        baseband = np.convolve(up, self.pulse, mode='full')
+        baseband = fftconvolve(up, self.pulse)
 
         #upconvert
         t = np.arange(len(baseband)) / fs
