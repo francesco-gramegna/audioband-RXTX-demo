@@ -1,3 +1,4 @@
+import sys
 import matplotlib.pyplot as plt
 import AudioReceiver
 from scipy.signal import welch
@@ -93,11 +94,38 @@ class snrEstimator():
                 raise ValueError("The arrays for the frequencies do not match.")
             pXSignal[i] = max(0, pXMixed[i] - pXNoise[i])
 
-        
+
+class soundRecorder():
+    def __init__(self):
+        self.config = {'FS':48000,
+                  'payloadSamples':48000*1}
+
+        self.rcv =  AudioReceiver.AudioReceiver(self.config, self)
+    
+    def pushWindow(self, data):
+        #align data with argmax
+
+        tmax = np.argmax(data)
+        tmax = tmax - 1000
+        if(tmax < 0):
+            tmax = 0
+        data = data[tmax:]
+        x = np.linspace(0,self.config["payloadSamples"]/self.config['FS'], len(data))
+        plt.plot(data)
+        plt.show()
+
     
 if __name__ == "__main__":
-    test = PSDVisualizer()
+    match sys.argv[1]:
+        case "psd":
+            test = PSDVisualizer()
 
-    test.rcv.listen()
+            test.rcv.listen()
+
+        case "impulse":
+            test = soundRecorder()
+            test.rcv.listen()
+
+
 
 

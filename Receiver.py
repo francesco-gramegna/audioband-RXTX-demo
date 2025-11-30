@@ -34,7 +34,7 @@ class SimpleReceiver():
 
         self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, modulator)
 
-        self.channelEst = Equalisation.ChannelEstimator(config, modulator, len(self.preambule)//2)
+        self.channelEst = Equalisation.ChannelEstimator(config, modulator, 20000) #len(self.preambule)//2)
 
         self.state = 'IDLE'
         self.waitingSamples = 0
@@ -155,7 +155,10 @@ class SimpleReceiver():
 
         h = self.channelEst.estimateChannel(phaseSync)
 
-        plt.plot(h)
+        h = self.channelEst.interpolate_h(h)
+
+        plt.plot(h.real, 'b')
+        plt.plot(h.imag, 'r')
         plt.show()
 
         #we remove the preamble

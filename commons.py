@@ -13,7 +13,7 @@ class Common():
     config = {'FS' : 48000,
               'FC' : 700,
               'RS' : 50,
-              'preambleSymbols' : 25,
+              'preambleSymbols' : 300,
               'windowLenghtSymbols' : 8,
               'corrRatioThresh' : 0.45, #very very low snr
               'excessBandwidth': 0.50,

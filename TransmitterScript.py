@@ -23,6 +23,12 @@ def main():
         write("output.wav", config['FS'], wave.astype(np.float32))
         return
     
+
+    if(sys.argv[1] == 'dirac'):
+        wave = utils.generateDirac(config)
+        write("output.wav", config['FS'], wave.astype(np.float32))
+        return
+
     text = sys.argv[1]
 
     config = Common.config

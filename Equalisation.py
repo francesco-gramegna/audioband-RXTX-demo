@@ -10,43 +10,27 @@ import matplotlib.pyplot as plt
 import Synchronisation
 import numpy as np
 import utils
-
-import numpy as np
-from scipy.signal import decimate
+from scipy.signal import decimate, upfirdn # Added upfirdn
 
 class ChannelEstimator:
     def __init__(self, config, mod, L):
-        # L is the channel order (memory length). Taps = L + 1.
         self.config = config
         
-        # --- Downsampling Setup ---
-        # Q is assumed to be the number of samples per symbol
-        try:
-            D = config['samplesPerSymbol'] 
-            if D < 1: D = 1
-        except KeyError:
-            # Fallback if config is missing key, but this must be defined for proper downsampling
-            raise ValueError("Config must include 'samples_per_symbol' for downsampling.")
+        D = config['samplesPerSymbol'] 
 
         self.D = D
-        self.L_ds = int(np.ceil((L + 1) / self.D)) - 1 # New channel order length
+        self.L_full = L # Store the original desired channel length
+        self.L_ds = int(np.ceil((L + 1) / self.D)) - 1
 
         # 1. Downsample the Preamble once
         preamble_full = mod.getBasebandPreamble()
-        self.preamble_full = preamble_full
-        # Use decimate for necessary anti-aliasing filtering
+        self.lenPreamble = len(preamble_full)
         self.preamble_ds = decimate(preamble_full, self.D, ftype='fir')
         
-        # --- Normal Equation Pre-Calculation (Memory Efficient) ---
+        # --- Normal Equation Pre-Calculation ---
         X_temp = self.make_X_matrix(self.preamble_ds, self.L_ds)
-        
-        # Calculate R_xx = X^H * X 
         R_xx = X_temp.conj().T @ X_temp
-        
-        # Calculate the pseudo-inverse of the small R_xx matrix
         self.R_xx_pinv = np.linalg.pinv(R_xx)
-        
-        # Delete the large temporary X matrix immediately
         del X_temp 
 
     def make_X_matrix(self, x, L_ds):
@@ -58,18 +42,40 @@ class ChannelEstimator:
         X = np.zeros((rows, num_taps), dtype=np.complex64)
 
         for i in range(rows):
-            # Grab x[i] to x[i+L_ds] and reverse it (x[n], x[n-1], ...)
             segment = x[i : i + num_taps]
             X[i, :] = segment[::-1]
 
         return X
 
-    
-    def estimateChannel(self, inData):
-        # 1. Slice and Downsample the Received Data
-        rx_segment_full = inData[:len(self.preamble_full)] # Assuming full length is known
+    def interpolate_h(self, h_ds):
+        """
+        Interpolates the downsampled channel estimate (h_ds) back to the 
+        full sampling rate by a factor of D.
+        """
+        # upfirdn(h_filter, x_data, up_factor, down_factor)
+        # Here, we only want to upsample, so up_factor=D, down_factor=1.
+        # h_filter is the low-pass filter required for interpolation. 
+        # upfirdn is often optimized to handle this by default if a simple 
+        # FIR filter is passed. Using the FIR method for simplicity:
         
-        # Filter and decimate the received segment using the same factor D
+        h_interp = upfirdn(np.array([1.]), h_ds, self.D)
+        
+        # The result h_interp will have length (len(h_ds) - 1) * D + 1.
+        # We then truncate it to the original desired channel length (L_full + 1) 
+        # and ensure the phase is preserved correctly.
+        
+        num_taps_full = self.L_full + 1
+        
+        # The first tap is correct; subsequent taps might need minor time alignment 
+        # or simply truncation to the intended length.
+        return h_interp[:num_taps_full]
+
+    
+    def estimateChannel(self, inData, upsample_output=False):
+        # ... (Steps 1-5 for calculating h_hat_ds are the same) ...
+        
+        # 1. Slice and Downsample the Received Data
+        rx_segment_full = inData[:self.lenPreamble]
         rx_segment_ds = decimate(rx_segment_full, self.D, ftype='fir')
         
         # 2. Slice the used portion of y (y_used)
@@ -80,12 +86,16 @@ class ChannelEstimator:
         
         # 4. Calculate the cross-correlation vector: r_xy = X^H * y
         r_xy = X_temp.conj().T @ y_used 
-        
-        # Delete temporary X matrix immediately to free memory
         del X_temp 
         
-        # 5. Solve the Normal Equation: h = R_xx_pinv * r_xy
-        h_hat = self.R_xx_pinv @ r_xy
+        # 5. Solve the Normal Equation (h_hat_ds is downsampled estimate)
+        h_hat_ds = self.R_xx_pinv @ r_xy
 
-        # h_hat contains the L_ds + 1 channel taps at the downsampled rate
-        return h_hat
+        # 6. Optional Upsampling
+        if upsample_output:
+            # Interpolate the short h_ds vector back to the full rate
+            h_hat_full = self.interpolate_h(h_hat_ds)
+            return h_hat_full
+        else:
+            # Return the efficient, short, downsampled channel estimate
+            return h_hat_ds
