@@ -16,22 +16,27 @@ from scipy.signal import decimate, upfirdn # Added upfirdn
 class ChannelEstimator:
     def __init__(self, config, mod):
         self.config = config
-        self.L = config['ChannelSymbolsLen']
+        self.L = config['channelSymbolsLen']
 
-        self.preambleBits = utils.generatePreambleBits(config['preambleSymbols'], config['bitsPerSymbol'])
+        bits = utils.generatePreambleBits(config['preambleSymbols'], config['bitsPerSymbol'])
+        symbols = bits.reshape((-1, config['bitsPerSymbol']))
+        indices = symbols.dot(1 << np.arange(config['bitsPerSymbol']-1, -1, -1))
+
+        self.preambleSymbols = np.array(mod.constellation.map(indices))
+        
         self.preamble = mod.getBasebandPreamble()
 
-        if(L >= len(self.preambleBits)):
+        if(self.L >= len(self.preambleSymbols)):
             raise ValueError("Then channel memory should be smaller than the preamble for good estimation!")
 
-        self.X = self.build_convolution_matrix()
+        X = self.build_convolution_matrix()
         self.Xinv = np.linalg.pinv(X)
-        self.Xc = self.X.conj()
-        self.X1 = np.linalg.pinv(X.conj().T @ X) 
+        self.Xc = X.conj()
+        self.X1 = np.linalg.pinv(self.Xc.T @ X) 
 
     
     def build_convolution_matrix(self):
-        x = self.preambleBits
+        x = self.preambleSymbols
         N = len(x)
         L = self.L
 
@@ -39,18 +44,17 @@ class ChannelEstimator:
         X = np.zeros((rows, L), dtype=complex)
 
         for i in range(rows):
-            # Extract reversed window
-            X[i, :] = x[i + L - 1 : i - 1 : -1]
+            X[i, :] = x[i:i+L][::-1] 
 
         return X
-    
+
     #data is already matched filtered and sampled
     def estimateChannel(self, data):
-        data = data[:len(self.preambleBits)]
-        y = data[self.L - 1: len(self.preambleBits)]
+
+        data = data[:len(self.preambleSymbols)]
+
+        y = data[self.L - 1: len(self.preambleSymbols)]
         p_hat = self.X1 @ (self.Xc.T @ y)
         return p_hat
-
-
 
 

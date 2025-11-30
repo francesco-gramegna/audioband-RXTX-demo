@@ -1,3 +1,5 @@
+import Synchronisation
+import Equalisation
 import TimeReceiver
 import commons
 import sys
@@ -5,7 +7,7 @@ import matplotlib.pyplot as plt
 import AudioReceiver
 from scipy.signal import welch
 import numpy as np
-from scipy.signal import savgol_filter 
+from scipy.signal import savgol_filter , fftconvolve
 
 
 class PSDVisualizer():
@@ -183,6 +185,103 @@ class impulseResponseEstimator():
             plt.show()
 
 
+
+
+class impulseResponseEstimator():
+    #class to visualise 2 channel impulse reponse
+    def __init__(self, nbPlots, diracTime):
+        plt.rcParams.update({'font.size': 18})
+        config = {'FS' : 48000,
+              'FC' : 500,
+              'RS' : 20,
+              'preambleSymbols' : 20,
+              'windowLenghtSymbols' : 6, #1 second of impulse resp  
+              'corrRatioThresh' : 0.70, 
+              'excessBandwidth': 0.50,
+              'lpCutoffEpsilon': 0.05,
+              'bitsPerSymbol' : 2,
+              'Eb': 400
+              }
+        Common = commons.CommonDynamic(config)
+        self.Common = Common
+        self.config = config
+        receiver = TimeReceiver.TimeReceiver(Common.config, Common.mod, Common.demod, False, self.processPayload)
+        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=50) #15 should be enough
+        self.receiver = receiver
+
+        fig, ax = plt.subplots(nbPlots, figsize=(12,8))
+        self.ax = ax
+        self.fig = fig
+        
+        self.nbPlots = nbPlots
+
+        self.captured = 0
+        self.diracTime = diracTime
+
+    def processPayload(self, data):
+        print("Got one")
+        if(self.captured >= self.nbPlots):
+            returnplt.rcParams.update({'font.size': X})
+
+        data *= 30
+        #discard syncrhonisation time
+        data = data[self.receiver.preambleLenght:]
+
+        x = np.linspace(0,len(data)/self.config['FS'], len(data))
+
+        self.ax[self.captured].set_xlabel("Time (seconds)") 
+        self.ax[self.captured].set_ylabel("Recorded Impulse response") 
+
+        #put dirac time 
+        diracT = self.diracTime #+ self.receiver.preambleLenght
+        diracT = diracT  
+        plotDiracTime = x[diracT]
+
+        #self.ax[self.captured].axvline(x=plotDiracTime, color='red', linestyle='--', linewidth=2, label="Dirac time")
+        #self.ax[self.captured].legend()
+        self.ax[self.captured].set_title("Room " + str(self.captured+1))
+        self.ax[self.captured].set_ylim(-2, 2)
+
+        self.ax[self.captured].plot(x, data )
+        
+        self.captured+=1
+        if(self.captured >= self.nbPlots):
+            self.fig.suptitle('Plots of different channel (rooms) impulse reponse')
+            plt.tight_layout()
+            plt.show()
+
+
+class ChannelISIEstimator():
+    def __init__(self):
+        plt.rcParams.update({'font.size': 18})
+        config = commons.Common.config
+        self.config = config
+        receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
+        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=15) 
+        self.receiver = receiver
+        self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
+
+        self.channelEst = Equalisation.ChannelEstimator(config, commons.Common.mod)
+        self.mod = commons.Common.mod
+
+        self.pulseMF = self.mod.pulse.conj()[::-1]
+
+    def processPayload(self, data):
+
+        phaseSync = self.phaseSynchroniser.synchronisePhase(data)
+        corr = fftconvolve(phaseSync, self.pulseMF)
+        corr = corr[len(self.pulseMF) -1 :]
+
+        #samples at symbols
+        #corr = corr[len(self.pulseMF)-1:]
+        corr = corr[::self.config["samplesPerSymbol"]]
+        #estimate the channel
+
+        p = self.channelEst.estimateChannel(corr)
+        plt.plot(np.abs(p))
+        plt.show()
+
+
 delayDirac = 2500
 nbPlots = 2
 if __name__ == "__main__":
@@ -196,5 +295,10 @@ if __name__ == "__main__":
 
             test =impulseResponseEstimator(2, delayDirac)
             test.rcv.listen()
+        case "isi":
+            test =ChannelISIEstimator()
+            test.rcv.listen()
+        
+
 
 

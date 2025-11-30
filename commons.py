@@ -1,9 +1,12 @@
+import math
 import Demodulator
 import sounddevice as sd
 import numpy as np
 import Synchronisation
 import matplotlib.pyplot as plt
-import mathUtils import Modulator import plots
+import mathUtils
+import Modulator
+import plots
 
 
 class CommonDynamic():
@@ -35,15 +38,18 @@ class Common():
     config = {'FS' : 48000,
               'FC' : 700,
               'RS' : 50,
-              'preambleSymbols' : 300,
+              'preambleSymbols' : 50,
               'windowLenghtSymbols' : 8,
-              'corrRatioThresh' : 0.45, #very very low snr
+              'corrRatioThresh' : 0.80, #very very low snr
               'excessBandwidth': 0.50,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,
               'Eb': 400,
-              'ChannelSymbolsLen': 10 #arbitrary
+              'channelTMax' : 0.1 #in seconds
               }
+
+    config['channelSymbolsLen'] =  math.ceil(config['channelTMax'] * config['RS']) + 1
+
     
     pulse = mathUtils.rrc_pulse(config['FS'], config['RS'], alpha=0.25)
     
