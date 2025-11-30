@@ -1,3 +1,4 @@
+import EnvAnalysis
 import utils
 import sys
 from commons import Common
@@ -14,7 +15,6 @@ import plots
 
 
 def main():
-    
     config = Common.config
     mod = Common.mod
 
@@ -25,7 +25,11 @@ def main():
     
 
     if(sys.argv[1] == 'dirac'):
-        wave = utils.generateDirac(config)
+        common = EnvAnalysis.impulseResponseEstimator(EnvAnalysis.nbPlots, EnvAnalysis.delayDirac).Common
+        config = common.config
+        mod = common.mod
+
+        wave = utils.generateDirac(config, mod, EnvAnalysis.delayDirac) 
         write("output.wav", config['FS'], wave.astype(np.float32))
         return
 

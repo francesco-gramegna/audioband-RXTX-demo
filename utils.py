@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from scipy.signal import chirp
 import numpy as np
 
@@ -22,13 +23,17 @@ def generateFrequencySpan(config, mod):
     return np.concatenate([pre,sine_wave])
 
 
-def generateDirac(config):
+def generateDirac(config, mod, delayDirac):
+    pre = mod.getPassbandPreamble()
+
+    pre = pre 
+
     total_samples = int(config['FS'] * 3)
     signal = np.zeros(total_samples, dtype=np.float32)
 
-    signal[20000] = 1.0  # loudest possible non-clipping value
+    signal[delayDirac] = 1.0  # loudest possible non-clipping value
 
-    return signal
+    return np.concatenate([pre, signal])
 
 
 

@@ -13,9 +13,10 @@ import utils
 #
 
 class AudioReceiver():
-    def __init__(self, config, receiver ):
+    def __init__(self, config, receiver, cycles=float('inf')):
         self.config = config
         self.receiver = receiver
+        self.cycles= cycles
 
         self.size = config['payloadSamples']
         self.buf = np.zeros(config['payloadSamples'])
@@ -51,6 +52,7 @@ class AudioReceiver():
 
         # If buffer now full → send to worker
         if self.i == self.size:
+            self.cycles-=1
             #print("pushing")
             self.q.put({"data": self.buf.copy()})
             self.i = 0
@@ -95,6 +97,9 @@ class AudioReceiver():
             try:
                 while True: 
                     time.sleep(0.05)
+                    if(self.cycles <= 0):
+                        print("AudioReceiver nb of cycles reached. Stopping")
+                        break
             except KeyboardInterrupt:
                 print("Stopping...")
 

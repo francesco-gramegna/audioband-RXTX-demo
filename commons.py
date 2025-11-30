@@ -8,6 +8,30 @@ import Modulator
 import plots
 
 
+class CommonDynamic():
+    def __init__(self, config):
+        self.config = config
+
+        self.pulse = mathUtils.rrc_pulse(config['FS'], config['RS'], alpha=0.25)
+    
+        self.config['bytesPerWindow'] = config['windowLenghtSymbols'] * config['bitsPerSymbol'] // 8
+    
+        #auto definitions
+        self.config['samplesPerSymbol'] = config['FS'] // config['RS']
+    
+        self.config['payloadSamples'] = (config['preambleSymbols'] + config['windowLenghtSymbols']) * config['samplesPerSymbol']  +  len(self.pulse) - 1
+    
+        self.config['Bmin'] = config['RS']
+    
+        self.config['bandwidth'] = (1 + config['excessBandwidth'])*config['Bmin']
+    
+        self.constellation = Modulator.QAM(4, config['Eb'])
+    
+        self.mod = Modulator.Modulator(self.config, self.pulse, self.constellation)
+        self.demod = Demodulator.Demodulator(self.config, self.pulse, self.constellation)
+   
+
+
 class Common():
 
     config = {'FS' : 48000,
