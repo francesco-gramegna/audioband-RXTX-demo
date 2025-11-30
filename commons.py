@@ -3,9 +3,7 @@ import sounddevice as sd
 import numpy as np
 import Synchronisation
 import matplotlib.pyplot as plt
-import mathUtils
-import Modulator
-import plots
+import mathUtils import Modulator import plots
 
 
 class CommonDynamic():
@@ -43,7 +41,8 @@ class Common():
               'excessBandwidth': 0.50,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,
-              'Eb': 400
+              'Eb': 400,
+              'ChannelSymbolsLen': 10 #arbitrary
               }
     
     pulse = mathUtils.rrc_pulse(config['FS'], config['RS'], alpha=0.25)

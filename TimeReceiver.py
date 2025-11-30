@@ -17,7 +17,7 @@ import utils
 
 
 class TimeReceiver():
-    def __init__(self, config, modulator, demodulator, downconvert, processMethod):
+    def __init__(self, config, modulator, demodulator, downconvert,  processMethod):
         self.config = config
         self.modulator = modulator
         self.bufferSize = 4*config['payloadSamples']
@@ -100,9 +100,4 @@ class TimeReceiver():
                         self.upConvertedIncomingData = self.upConvertedIncomingData[sigEnd:]
 
                     self.processMethod(self.processingBuffer)
-
-
-
-
-  
 
