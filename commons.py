@@ -36,16 +36,16 @@ class CommonDynamic():
 class Common():
 
     config = {'FS' : 48000,
-              'FC' : 700,
-              'RS' : 50,
-              'preambleSymbols' : 50,
-              'windowLenghtSymbols' : 8,
-              'corrRatioThresh' : 0.80, #very very low snr
-              'excessBandwidth': 0.50,
+              'FC' : 19000,
+              'RS' : 2000,
+              'preambleSymbols' : 2000,
+              'windowLenghtSymbols' : 32,
+              'corrRatioThresh' : 0.50, #very very low snr
+              'excessBandwidth': 0.25,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,
               'Eb': 400,
-              'channelTMax' : 0.1 #in seconds
+              'channelTMax' : 0.02 #in seconds
               }
 
     config['channelSymbolsLen'] =  math.ceil(config['channelTMax'] * config['RS']) + 1

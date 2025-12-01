@@ -192,11 +192,11 @@ class impulseResponseEstimator():
     def __init__(self, nbPlots, diracTime):
         plt.rcParams.update({'font.size': 18})
         config = {'FS' : 48000,
-              'FC' : 500,
+              'FC' : 19000,
               'RS' : 20,
               'preambleSymbols' : 20,
-              'windowLenghtSymbols' : 6, #1 second of impulse resp  
-              'corrRatioThresh' : 0.70, 
+              'windowLenghtSymbols' : 20*3, #1 second of impulse resp  
+              'corrRatioThresh' : 0.60, 
               'excessBandwidth': 0.50,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,
@@ -252,12 +252,15 @@ class impulseResponseEstimator():
 
 
 class ChannelISIEstimator():
-    def __init__(self):
+    def __init__(self, nbEstimations):
+
+        self.nbEstimation = nbEstimations
+
         plt.rcParams.update({'font.size': 18})
         config = commons.Common.config
         self.config = config
         receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
-        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=15) 
+        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=100) 
         self.receiver = receiver
         self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
 
@@ -265,25 +268,117 @@ class ChannelISIEstimator():
         self.mod = commons.Common.mod
 
         self.pulseMF = self.mod.pulse.conj()[::-1]
+        self.i = 0
 
     def processPayload(self, data):
+        print("got one")
+
+        if self.nbEstimation == 0:
+            return
 
         phaseSync = self.phaseSynchroniser.synchronisePhase(data)
         corr = fftconvolve(phaseSync, self.pulseMF)
         corr = corr[len(self.pulseMF) -1 :]
+
+        
 
         #samples at symbols
         #corr = corr[len(self.pulseMF)-1:]
         corr = corr[::self.config["samplesPerSymbol"]]
         #estimate the channel
 
-        p = self.channelEst.estimateChannel(corr)
-        plt.plot(np.abs(p))
-        plt.show()
+        try:
+            p = self.channelEst.estimateChannel(corr)
+        except:
+            print("Timing error")
+            return
 
+        p = np.abs(p)
+
+        scale_meters = np.arange(len(p)) #in symbols
+        speed_sound = 331 #m/s
+
+        T = 1/self.config["RS"]#T = 1/Rs
+        scale_meters = T * speed_sound * scale_meters
+
+
+        x = np.arange(len(p))
+
+        plt.plot(x, np.abs(p), label="Signal " + str(self.i+1))
+        self.i+=1
+
+        plt.grid(True)
+        self.nbEstimation  += -1
+        if(self.nbEstimation == 0):
+
+            ax = plt.gca()
+
+            # Secondary ticks on same axis using meter scale
+            ax2 = ax.secondary_xaxis('top', functions=(lambda s: s*T*speed_sound,
+                                                  lambda m: m/(T*speed_sound)))
+            ax2.set_xlabel("Distance travelled (meters)")
+
+            ax.set_xlabel("Symbol index")
+            ax.set_ylabel("|h|")
+            plt.title("Estimated h (channel impulse response)")
+            plt.legend()
+            plt.show()
+
+
+class EyeDiagram():
+    def __init__(self, window):
+        
+        plt.rcParams.update({'font.size': 18})
+        config = commons.Common.config
+        self.config = config
+        receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
+        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=100) 
+        self.receiver = receiver
+
+        self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
+
+        self.mod = commons.Common.mod
+
+        self.pulseMF = self.mod.pulse.conj()[::-1]
+
+        self.window = window
+        self.i = 0
+
+  
+    def processPayload(self, data):
+        if(self.i >= self.window):
+            return
+
+        print('got one')
+
+        phaseSync = self.phaseSynchroniser.synchronisePhase(data)
+        data = phaseSync
+
+        samplesPerSymbol = self.config['samplesPerSymbol']
+        windowSymbols = self.window  
+
+        t = np.linspace(-windowSymbols/2 , windowSymbols/2, self.config['samplesPerSymbol']* windowSymbols)
+        for i in range(self.config['payloadSamples'] - (windowSymbols - 1)):
+            start = i * samplesPerSymbol
+            end = start + windowSymbols * samplesPerSymbol
+            if(len(data) < end):
+                break
+            plt.plot(t, data[start:end].real, 'b',alpha=0.3)
+            self.i += 1
+
+        if( self.i >= self.window):
+            plt.title(f"Eye Diagram over {windowSymbols} Symbols")
+            plt.xlabel("T")
+            plt.ylabel("Amplitude")
+            plt.grid(True)
+            plt.show()
+        
 
 delayDirac = 2500
 nbPlots = 2
+
+eyeSize = 200
+isiPlots = 4
 if __name__ == "__main__":
     match sys.argv[1]:
         case "psd":
@@ -296,8 +391,13 @@ if __name__ == "__main__":
             test =impulseResponseEstimator(2, delayDirac)
             test.rcv.listen()
         case "isi":
-            test =ChannelISIEstimator()
+            test =ChannelISIEstimator(isiPlots)
             test.rcv.listen()
+        case "eye":
+            test =EyeDiagram(3)
+            test.rcv.listen()
+        
+
         
 
 

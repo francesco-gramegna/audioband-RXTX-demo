@@ -37,9 +37,24 @@ def generateDirac(config, mod, delayDirac):
 
 
 
-        
+ 
+def generateSonar(config, mod, cycles, delay):
+    delay = 5
+    _bytes = [0] * config['bytesPerWindow']
 
+    _, pre = mod.modulateWindow(_bytes)
     
+    total = np.zeros(delay*config['FS'])
+    delayArr = np.zeros(delay * config['FS']//2)
+
+    #audible warning sound
+    t = np.arange(config['FS'] * 0.25)
+    sound = np.sin(2 * np.pi * 400 / config['FS'] * t) * 0.005
+       
+    for c in range(cycles):
+        total = np.concatenate([total, sound, delayArr, pre ,delayArr])
+        
+    return total 
 
 
 

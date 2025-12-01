@@ -32,15 +32,28 @@ def main():
         wave = utils.generateDirac(config, mod, EnvAnalysis.delayDirac) 
         write("output.wav", config['FS'], wave.astype(np.float32))
         return
+    
+
 
     text = sys.argv[1]
 
     config = Common.config
     mod = Common.mod
 
+    if(sys.argv[1] == "sonar"):
+        wave = utils.generateSonar(config, mod, EnvAnalysis.isiPlots, delay=3)
+
+        write("output.wav", config['FS'], wave.astype(np.float32))
+        return
+
     total = []
     stringToSend = text 
+
     bytesToSend = [ord(c) for c in stringToSend]
+
+    if(sys.argv[1] == 'eye'):
+        bytesToSend = np.random.bytes(EnvAnalysis.eyeSize) 
+
     #partition into differnet payloads
 
     for i in range(0, len(bytesToSend), config['bytesPerWindow']):
