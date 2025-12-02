@@ -260,12 +260,16 @@ class ChannelISIEstimator():
         config = commons.Common.config
         self.config = config
         receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
-        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=100) 
+        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=1000) 
         self.receiver = receiver
         self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
+        self.MLAmplitudeSync = Synchronisation.MLAmplitudeSync(config, commons.Common.mod)
+
+        self.bestSamplingSync = Synchronisation.SymbolTimingSynchroniser(config, commons.Common.mod)
 
         self.channelEst = Equalisation.ChannelEstimator(config, commons.Common.mod)
         self.mod = commons.Common.mod
+
 
         self.pulseMF = self.mod.pulse.conj()[::-1]
         self.i = 0
@@ -280,15 +284,18 @@ class ChannelISIEstimator():
         corr = fftconvolve(phaseSync, self.pulseMF)
         corr = corr[len(self.pulseMF) -1 :]
 
-        
+        best_phase , _ = self.bestSamplingSync.findOptimalSamplingPhase(corr)
 
         #samples at symbols
         #corr = corr[len(self.pulseMF)-1:]
-        corr = corr[::self.config["samplesPerSymbol"]]
+        corr = corr[best_phase::self.config["samplesPerSymbol"]]
         #estimate the channel
 
+        #corr = self.MLAmplitudeSync.synchroniseAmplSymbols(corr) #todo noise too much amplified
+
         try:
-            p = self.channelEst.estimateChannel(corr)
+            p,n0 = self.channelEst.estimateChannel(corr)
+            print("n0 : ", n0)
         except:
             print("Timing error")
             return
@@ -374,6 +381,8 @@ class EyeDiagram():
             plt.show()
         
 
+
+
 delayDirac = 2500
 nbPlots = 2
 
@@ -396,7 +405,17 @@ if __name__ == "__main__":
         case "eye":
             test =EyeDiagram(3)
             test.rcv.listen()
+
+        case "corr":
+            preamble = commons.Common.mod.getBasebandPreamble(False)
+            corr = fftconvolve(preamble, preamble.conj()[::-1])
         
+            plt.plot(corr)
+            preamble = commons.Common.mod.getBasebandPreamble()
+            corr = fftconvolve(preamble, preamble.conj()[::-1])
+
+            plt.plot(corr)
+            plt.show()
 
         
 

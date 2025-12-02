@@ -10,6 +10,22 @@ class Demodulator():
         self.pulse = pulse
         self.constellation = constellation
 
+    def demodulateSampled(self, symbols):
+
+        print(symbols)
+        _, bits = self.constellation.demap(symbols)
+
+        bits = bits.flatten()
+
+        bytes_array = np.packbits(bits)
+
+        print(bytes(bytes_array).decode(errors='replace'), end="\n", flush=True)
+        
+        #print(bits)
+
+        return bits
+
+
 
     def demodulate(self, signal):
         #we demodulate : 

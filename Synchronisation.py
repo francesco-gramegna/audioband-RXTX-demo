@@ -1,3 +1,4 @@
+import utils
 from scipy.signal import fftconvolve
 import numpy as np
 import matplotlib.pyplot as plt
@@ -66,7 +67,6 @@ class TimeSynchroniser():
             break
             
 
-
         #check if the peak is bigger than our threshold 
         if (rho[t_peak] >= self.config['corrRatioThresh']):
 
@@ -104,9 +104,7 @@ class MLPhaseSynchroniser():
         self.preambuleMF = np.conj(modulator.getBasebandPreamble()[::-1])
         self.M = len(self.preambuleMF)
 
-
     def findPhaseOffset(self, preambule):
-
 
         #we could find the phase AND the timing in only one go..;
         #TODO if perfomance is issue
@@ -117,7 +115,7 @@ class MLPhaseSynchroniser():
 
         phase = np.angle(corr)
         #print("Phase offset : " , phase[peak_index])
-        
+
         return phase[peak_index]
 
 
@@ -127,6 +125,36 @@ class MLPhaseSynchroniser():
         corrected = signal * np.exp(-1j * phaseOffset)
 
         return corrected
+
+
+class MLAmplitudeSync():
+    def __init__(self,config,mod):
+        self.config = config
+        self.mod = mod
+        bits = utils.generatePreambleBits(config['preambleSymbols'], config['bitsPerSymbol'])
+        symbols = bits.reshape((-1, config['bitsPerSymbol']))
+        indices = symbols.dot(1 << np.arange(config['bitsPerSymbol']-1, -1, -1))
+
+        self.preambleSymbols = np.array(mod.constellation.map(indices))
+
+        self.denom = np.sum(np.abs(self.preambleSymbols)**2) / len(self.preambleSymbols)
+
+        
+    def estimateAmpl(self, data):
+        data = data[:len(self.preambleSymbols)]
+        A = np.sum(data * self.preambleSymbols.conj()) / len(self.preambleSymbols)
+
+        A = A/ self.denom
+
+        return 1/A
+
+    def synchroniseAmplSymbols(self, data):
+        A = self.estimateAmpl(data)
+        return A * data
+
+
+
+
 
     
 class MLFreqPhaseSynchroniser():
@@ -151,4 +179,103 @@ class MLFreqPhaseSynchroniser():
         return corrected
 
 
+#ai gen
+class SymbolTimingSynchroniser():
+    def __init__(self, config, modulator):
+        self.config = config
+        self.sps = config['samplesPerSymbol']
+        
+        # Get preamble symbols for timing metric
+        import utils
+        bits, _, symbols = utils.generate_zc_4qam_preamble(config['preambleSymbols'], 
+                                         modulator.constellation)
 
+        #symbols = bits.reshape((-1, config['bitsPerSymbol']))
+        #indices = symbols.dot(1 << np.arange(config['bitsPerSymbol']-1, -1, -1))
+        #self.preamble_symbols = np.array(modulator.constellation.map(indices))
+
+        self.preamble_symbols = symbols
+    
+   
+    def findOptimalSamplingPhase(self, mf_output):
+        """
+        Find the best sampling phase (0 to sps-1) for symbol decisions.
+        
+        Uses Mueller-Muller style timing metric or energy maximization.
+        
+        Args:
+            mf_output: Matched filter output (continuous samples)
+        
+        Returns:
+            best_phase: Optimal sampling offset (0 to sps-1)
+            metric_values: Timing metric for each phase (for debugging)
+        """
+        method = self.config.get('timingMetric', 'energy')  # or 'mm', 'early_late'
+        
+        if method == 'energy':
+            return self._energy_maximization(mf_output)
+        elif method == 'mm':
+            return self._mueller_muller(mf_output)
+        else:
+            return self._energy_maximization(mf_output)
+    
+    
+    def _energy_maximization(self, mf_output):
+        """
+        Simple and effective: pick the phase that maximizes symbol energy.
+        """
+        n_symbols = len(self.preamble_symbols)
+        
+        max_energy = -np.inf
+        best_phase = 0
+        metric_values = np.zeros(self.sps)
+        
+        for phase in range(self.sps):
+            # Sample at this phase
+            samples = mf_output[phase::self.sps][:n_symbols]
+            
+            if len(samples) < n_symbols:
+                continue
+            
+            # Compute energy
+            energy = np.sum(np.abs(samples)**2)
+            metric_values[phase] = energy
+            
+            if energy > max_energy:
+                max_energy = energy
+                best_phase = phase
+        
+        return best_phase, metric_values
+    
+    def _mueller_muller(self, mf_output):
+        """
+        Mueller-Muller timing error detector.
+        More sophisticated, works better with random data.
+        """
+        n_symbols = len(self.preamble_symbols)
+        
+        min_error = np.inf
+        best_phase = 0
+        metric_values = np.zeros(self.sps)
+        
+        for phase in range(self.sps):
+            samples = mf_output[phase::self.sps][:n_symbols]
+            
+            if len(samples) < n_symbols - 1:
+                continue
+            
+            # MM timing error: real(conj(y[n]) * y[n-1])
+            # Should be zero at optimal sampling
+            timing_error = 0
+            for i in range(1, len(samples)):
+                timing_error += np.abs(np.real(
+                    samples[i] * np.conj(samples[i-1])
+                ))
+            
+            metric_values[phase] = timing_error
+            
+            if timing_error < min_error:
+                min_error = timing_error
+                best_phase = phase
+        
+        return best_phase, metric_values

@@ -14,6 +14,7 @@ class Modulator():
         self.bits_per_symbol = int(np.log2(constellation.M))
 
         self.preamble = utils.generatePreambleBits(config['preambleSymbols'], self.bits_per_symbol) 
+        self.preambleZ, _,_ = utils.generate_zc_4qam_preamble(config['preambleSymbols'], constellation)
 
         self.window = config['windowLenghtSymbols']
         self.constellation = constellation
@@ -28,12 +29,12 @@ class Modulator():
         self.lpf_state = lfilter_zi(self.taps, 1) * 0
 
 
-    def getBasebandPreamble(self):
-        baseband, passband = self.modulateWindow([], force=True)
+    def getBasebandPreamble(self, z=True):
+        baseband, passband = self.modulateWindow([], force=True, z=z)
         return baseband
 
-    def getPassbandPreamble(self):
-        baseband, passband = self.modulateWindow([], force=True)
+    def getPassbandPreamble(self, z=True):
+        baseband, passband = self.modulateWindow([], force=True, z=z)
         return passband
 
 
@@ -59,7 +60,7 @@ class Modulator():
 
 
 
-    def modulateWindow(self, _bytes, force=False):
+    def modulateWindow(self, _bytes,force=False, z=True):
         fs = self.config['FS']       
         fc = self.config['FC']      
         rs = self.config['RS']     
@@ -72,7 +73,10 @@ class Modulator():
             raise ValueError("Incorrect number of bits")
         print('total bits : ',  len(bits))
 
-        bits = np.concatenate([self.preamble, bits])
+        if(z):
+            bits = np.concatenate([self.preambleZ, bits])
+        else:
+            bits = np.concatenate([self.preamble, bits])
 
         symbols = bits.reshape((-1, self.bits_per_symbol))
 

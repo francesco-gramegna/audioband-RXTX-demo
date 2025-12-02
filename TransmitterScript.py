@@ -40,10 +40,15 @@ def main():
     config = Common.config
     mod = Common.mod
 
-    if(sys.argv[1] == "sonar"):
-        wave = utils.generateSonar(config, mod, EnvAnalysis.isiPlots, delay=3)
+    if(sys.argv[1] == 'alternating'):
+        wave = utils.modulateAlternatingBits(config,mod)
 
         write("output.wav", config['FS'], wave.astype(np.float32))
+        return
+    if(sys.argv[1] == "sonar"):
+        wave = utils.generateSonar(config, mod, EnvAnalysis.isiPlots, delay=0.5)
+        write("output.wav", config['FS'], wave.astype(np.float32))
+
         return
 
     total = []

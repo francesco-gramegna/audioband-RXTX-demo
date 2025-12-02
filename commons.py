@@ -37,18 +37,19 @@ class Common():
 
     config = {'FS' : 48000,
               'FC' : 19000,
-              'RS' : 2000,
-              'preambleSymbols' : 2000,
-              'windowLenghtSymbols' : 32,
-              'corrRatioThresh' : 0.50, #very very low snr
-              'excessBandwidth': 0.25,
+              'RS' : 100,
+              'preambleSymbols' : 25,
+              'windowLenghtSymbols' : 4,
+              'corrRatioThresh' : 0.80, #very  ery low snr
+              'excessBandwidth': 0.50,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,
-              'Eb': 400,
-              'channelTMax' : 0.02 #in seconds
+              'Eb': 1,
+              'channelTMax' : 0.05 #in seconds
               }
 
-    config['channelSymbolsLen'] =  math.ceil(config['channelTMax'] * config['RS']) + 1
+    #config['channelSymbolsLen'] =  math.ceil(config['channelTMax'] * config['RS']) + 1
+    config['channelSymbolsLen'] = 15
 
     
     pulse = mathUtils.rrc_pulse(config['FS'], config['RS'], alpha=0.25)
