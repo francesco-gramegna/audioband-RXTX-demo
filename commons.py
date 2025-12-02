@@ -36,11 +36,11 @@ class CommonDynamic():
 class Common():
 
     config = {'FS' : 48000,
-              'FC' : 19000,
-              'RS' : 100,
-              'preambleSymbols' : 25,
-              'windowLenghtSymbols' : 4,
-              'corrRatioThresh' : 0.80, #very  ery low snr
+              'FC' : 10000,
+              'RS' : 500,
+              'preambleSymbols' : 227,
+              'windowLenghtSymbols' : 80,
+              'corrRatioThresh' : 0.40, #very  ery low snr
               'excessBandwidth': 0.50,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,

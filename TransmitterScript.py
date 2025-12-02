@@ -70,7 +70,7 @@ def main():
 
         _, passband = mod.modulateWindow(window)
 
-        total = np.append(total,passband)
+        total = np.concatenate([total,np.zeros((int(0.05 * 48000))) ,passband])
 
 
 

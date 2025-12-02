@@ -93,7 +93,8 @@ class Modulator():
         b = np.array(self.constellation.map(indices), dtype=np.complex128)
 
         #save the symbols to a file for testing purposes
-        np.save("symbols", b)
+        if not force:
+            np.save("symbols", b)
 
         #print(b)
         

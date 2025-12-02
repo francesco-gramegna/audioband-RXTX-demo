@@ -10,18 +10,42 @@ class Demodulator():
         self.pulse = pulse
         self.constellation = constellation
 
-    def demodulateSampled(self, symbols):
+    def demodulateSampled(self, symbols, debug=False):
 
-        print(symbols)
+        #print(symbols)
         _, bits = self.constellation.demap(symbols)
 
-        bits = bits.flatten()
-
-        bytes_array = np.packbits(bits)
-
-        print(bytes(bytes_array).decode(errors='replace'), end="\n", flush=True)
         
-        #print(bits)
+        shouldGet = np.load("symbols.npy")
+        start = self.config['preambleSymbols']
+        #start = 0
+    
+        bits = bits.flatten()
+        bytes_array = np.packbits(bits)
+        print(bytes(bytes_array).decode(errors='replace'), end="", flush=True)
+        
+        if(debug):
+            print()
+            plt.figure(figsize=(10, 6))
+            
+            # Real part subplot
+            plt.subplot(2, 1, 1)
+            plt.plot(shouldGet[start:].real, 'b', label="Reference (Real)")
+            plt.plot(symbols.real, 'g', label="Received (Real)")
+            plt.title("Real Component")
+            plt.grid(True)
+            plt.legend()
+            
+            # Imaginary part subplot
+            plt.subplot(2, 1, 2)
+            plt.plot(shouldGet[start:].imag, 'c', label="Reference (Imag)")
+            plt.plot(symbols.imag, 'r', label="Received (Imag)")
+            plt.title("Imaginary Component")
+            plt.grid(True)
+            plt.legend()
+            
+            plt.tight_layout()
+            plt.show()
 
         return bits
 

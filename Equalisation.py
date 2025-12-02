@@ -35,7 +35,20 @@ class ChannelEstimator:
         self.X = X
         self.Xinv = np.linalg.pinv(X)
         self.Xc = X.conj()
-        self.X1 = np.linalg.pinv(self.Xc.T @ X) 
+        #self.X1 = np.linalg.pinv(self.Xc.T @ X) 
+
+        #we regularise
+        eps = 1e-4
+        A = (self.Xc.T @ self.X)  # (L,L)
+        A += eps * np.eye(A.shape[0])
+
+        try:
+            X1 = np.linalg.inv(A)
+        except np.linalg.LinAlgError:
+            X1 = np.linalg.pinv(A)
+
+        self.X1 = X1
+
 
     
     def build_convolution_matrix(self):
@@ -57,7 +70,7 @@ class ChannelEstimator:
         data = data[:len(self.preambleSymbols)]
 
         y = data[self.L - 1:]
-        print(len(y))
+        #print(len(y))
         p_hat = self.X1 @ (self.Xc.T @ y)
 
         y_predicted = self.X @ p_hat #the preamble I should have recieved
@@ -73,41 +86,37 @@ class ChannelEstimator:
         return p_hat, noise_var
 
 
-
 class MMSEEqualizer:
     def __init__(self, config, mod):
         self.mod = mod
         self.K = config['channelSymbolsLen'] * 3
-
-        # The delay 
-        self.delta = self.K // 2                  
+        self.delta = self.K // 2
 
     def equalize(self, data, p_hat, noise_var):
-
-        # channel convolutional matrix
+        data = np.asarray(data)
         L = len(p_hat)
-        
+
+        # Toeplitz convolution matrix
         col = np.zeros(self.K + L - 1, dtype=complex)
         col[:L] = p_hat
-        
         row = np.zeros(self.K, dtype=complex)
         row[0] = p_hat[0]
-        
-        H = toeplitz(col, row) # Shape: (OutputLen, FilterLen)
+        H = toeplitz(col, row)
 
-        # Formula: w = (H^H * H + N0 * I)^-1 * H^H * d
-        
         Hh = H.conj().T
-        # autocorrelation of channel + Noise regularization
-        R = Hh @ H + noise_var * np.eye(self.K) 
-        
-        # Cross-correlation vector (H^H * delta_function)
-        p_vector = Hh[:, self.delta] 
-        
-        w = np.linalg.solve(R, p_vector)
+        R = Hh @ H + (noise_var + 1e-8) * np.eye(H.shape[1])
+        p_vector = Hh[:, self.delta]
 
-        y_hat = np.convolve(data, w, mode='same')
-        
+        try:
+            w = np.linalg.solve(R, p_vector)
+        except np.linalg.LinAlgError:
+            w = np.linalg.pinv(R) @ p_vector
+
+        #w = 0.5 * (w + np.flip(np.conj(w)))
+
+        # Apply filter and align
+        y_full = np.convolve(data, w, mode='full')
+        y_hat = y_full[self.delta : self.delta + len(data)]
+
         return y_hat, w
-
 
