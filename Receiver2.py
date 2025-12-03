@@ -12,12 +12,13 @@ from scipy.signal import savgol_filter , fftconvolve
 
 
 class Receiver():
-    def __init__(self, config, mod, demod):
+    def __init__(self, config, mod, demod, callback):
         self.config = config
         self.mod = mod
         self.demod = demod
         treceiver = TimeReceiver.TimeReceiver(config, mod, demod, True, self.processPayload)
         self.rcv =  AudioReceiver.AudioReceiver(self.config, treceiver) 
+        self.callback = callback
         self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, mod)
         self.MLAmplitudeSync = Synchronisation.MLAmplitudeSync(config, mod)
 
@@ -107,7 +108,10 @@ class Receiver():
         #print(len(ysym))
         #print(self.config['bytesPerWindow'])
 
-        self.demod.demodulateSampled(csym)
+        bits = self.demod.demodulateSampled(csym)
+
+        
+        self.callback(bits)
 
         #self.demod.demodulateSampled(ysym)
 
@@ -119,6 +123,8 @@ class Receiver():
 
 
 if __name__ == "__main__":
-    rcv = Receiver(Common.config, Common.mod, Common.demod)
+    rcv = Receiver(Common.config, Common.mod, Common.demod, lambda x: x)
     rcv.rcv.listen()
+
+
 

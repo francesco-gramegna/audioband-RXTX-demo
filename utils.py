@@ -15,12 +15,12 @@ def generateFrequencySpan(config, mod):
     
     pre = mod.getPassbandPreamble()
 
-    total_samples = config['FS']/2 * 60
+    total_samples = config['FS'] * 60
 
     t = np.arange(total_samples) / config['FS']
     sine_wave = chirp(t, f0=0, f1=24000, t1=60, method='linear')
 
-    return np.concatenate([pre,sine_wave])
+    return np.concatenate([np.zeros(48000 * 3), pre,sine_wave])
 
 
 def generateDirac(config, mod, delayDirac):

@@ -26,13 +26,15 @@ class Demodulator():
         
         if(debug):
             print()
+
+            plt.rcParams.update({'font.size': 18})
             plt.figure(figsize=(10, 6))
             
             # Real part subplot
             plt.subplot(2, 1, 1)
             plt.plot(shouldGet[start:].real, 'b', label="Reference (Real)")
             plt.plot(symbols.real, 'g', label="Received (Real)")
-            plt.title("Real Component")
+            plt.title("Real Component received vs expected")
             plt.grid(True)
             plt.legend()
             
@@ -40,7 +42,7 @@ class Demodulator():
             plt.subplot(2, 1, 2)
             plt.plot(shouldGet[start:].imag, 'c', label="Reference (Imag)")
             plt.plot(symbols.imag, 'r', label="Received (Imag)")
-            plt.title("Imaginary Component")
+            plt.title("Imaginary Component received vs expected")
             plt.grid(True)
             plt.legend()
             

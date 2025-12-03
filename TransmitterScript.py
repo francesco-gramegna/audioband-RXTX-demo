@@ -1,3 +1,4 @@
+import ImageTest
 import EnvAnalysis
 import utils
 import sys
@@ -48,25 +49,28 @@ def main():
     if(sys.argv[1] == "sonar"):
         wave = utils.generateSonar(config, mod, EnvAnalysis.isiPlots, delay=0.5)
         write("output.wav", config['FS'], wave.astype(np.float32))
-
-        return
-
+    
     total = []
     stringToSend = text 
 
     bytesToSend = [ord(c) for c in stringToSend]
 
     if(sys.argv[1] == 'eye'):
-        bytesToSend = np.random.bytes(EnvAnalysis.eyeSize) 
+        bytesToSend = np.random.randint(0, 255, EnvAnalysis.eyeSize) 
+
+    if(sys.argv[1] == "image"):
+        bytesToSend ,_ = ImageTest.image_to_pixel_bytes(ImageTest.path)
+
 
     #partition into differnet payloads
 
     for i in range(0, len(bytesToSend), config['bytesPerWindow']):
         window = bytesToSend[i:config['bytesPerWindow']+i]
+        window = np.array(window)
 
         #pad if now enough
         while(len(window) < config['bytesPerWindow']):
-            window += [0]
+            window = np.append(window, 0)
 
         _, passband = mod.modulateWindow(window)
 

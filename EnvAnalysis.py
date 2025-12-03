@@ -13,49 +13,71 @@ from scipy.signal import savgol_filter , fftconvolve
 class PSDVisualizer():
     def __init__(self):
         self.config = {'FS':48000,
-                  'payloadSamples':24000}
+                  'payloadSamples':48000*60}
+
+        config = {'FS' : 48000,
+              'FC' : 500,
+              'RS' : 100,
+              'preambleSymbols' : 5,
+              'windowLenghtSymbols' : 100 * 60, #1 second of impulse resp  
+              'corrRatioThresh' : 0.40, 
+              'excessBandwidth': 0.50,
+              'lpCutoffEpsilon': 0.05,
+              'bitsPerSymbol' : 2,
+              'Eb': 400
+              }
+        Common = commons.CommonDynamic(config)
+
+        plt.rcParams.update({'font.size': 18})
+        self.config = config
 
         self.snrEstimator = snrEstimator(self.config) 
 
-        plt.ion()   # enable interactive mode
-        self.fig, self.ax = plt.subplots()
-        self.line, = self.ax.plot([], [])  # empty line placeholder
+        receiver = TimeReceiver.TimeReceiver(self.config, Common.mod, Common.demod, False, self.pushWindow)
 
-        self.ax.set_xlabel("Frequency (Hz)")
-        self.ax.set_ylabel("PSD (dB/Hz)")
-        self.ax.set_title("Noise PSD (Live)")
-        self.ax.grid(True)
-
-        self.rcv =  AudioReceiver.AudioReceiver(self.config, self)
+        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver)
+        self.i = 0
     
     def pushWindow(self, data):
-        self.snrEstimator.pushData(data, noise=True)
+        print("got one")
 
-        fNoise , pXNoise = self.snrEstimator.getNoisePSD()
+        powers = []
+        for i in range(60):
+
+            self.snrEstimator.pushData(data[i*48000: (i+1)*48000], noise=True)
+
+
+            fNoise , pXNoise = self.snrEstimator.getNoisePSD()
 
         #get total power
 
-        df = fNoise[1] - fNoise[0]    
+            df = fNoise[1] - fNoise[0]    
 
-        total_power = np.sum(pXNoise * df)  # integrate PSD
+            total_power = np.sum(pXNoise * df)  # integrate PSD
 
-        total_db = 10*np.log10(total_power + 1e-18)
+            total_db = 10*np.log10(total_power + 1e-18)
 
-        psd_db = 10*np.log10(pXNoise + 1e-18)   # avoid log(0)
+            psd_db = 10*np.log10(pXNoise + 1e-18)   # avoid log(0)
 
-        # --- update plot ---
-        self.line.set_xdata(fNoise)
-        self.line.set_ydata(psd_db)
+            powers.append(total_db)
 
-        # update plot limits dynamically
-        self.ax.set_xlim([0, np.max(fNoise)])
-        #self.ax.set_ylim([np.min(psd_db) - 5, np.max(psd_db) + 5])
-        self.ax.set_ylim([-150, 10])
 
-        # redraw
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
-        self.ax.set_title(total_db)
+        y = np.linspace(0,24000, 60)
+        plt.plot(y, powers, label="Phone speaker" if self.i == 0 else "Portable speaker")
+
+        self.i += 1
+        if( self.i == 2):
+            plt.title("Phone power by frequence")
+
+            plt.legend()
+            plt.grid(True)
+
+            plt.xlabel("Freqs (Hz)")
+            plt.ylabel("Averaged power")
+
+            plt.show()
+
+        np.save("aaa", powers)
 
 
 
@@ -365,15 +387,20 @@ class EyeDiagram():
         windowSymbols = self.window  
 
         t = np.linspace(-windowSymbols/2 , windowSymbols/2, self.config['samplesPerSymbol']* windowSymbols)
-        for i in range(self.config['payloadSamples'] - (windowSymbols - 1)):
+
+        data = data[self.config['preambleSymbols'] * samplesPerSymbol : ]
+
+        for i in range(self.config['preambleSymbols'] * samplesPerSymbol - (windowSymbols - 1)):
             start = i * samplesPerSymbol
             end = start + windowSymbols * samplesPerSymbol
             if(len(data) < end):
                 break
-            plt.plot(t, data[start:end].real, 'b',alpha=0.3)
+            plt.plot(t, data[start:end].real, 'b',alpha=0.2)
             self.i += 1
+            print(self.i)
 
-        if( self.i >= self.window):
+        global eyeSize
+        if( self.i >= eyeSize):
             plt.title(f"Eye Diagram over {windowSymbols} Symbols")
             plt.xlabel("T")
             plt.ylabel("Amplitude")
@@ -383,10 +410,58 @@ class EyeDiagram():
 
 
 
+class PreambleReceived:
+    def __init__(self):
+
+        plt.rcParams.update({'font.size': 18})
+        config = commons.Common.config
+        self.config = config
+        receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
+        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=1000) 
+        self.receiver = receiver
+        self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
+        self.MLAmplitudeSync = Synchronisation.MLAmplitudeSync(config, commons.Common.mod)
+
+        self.mod = commons.Common.mod
+
+        self.pulseMF = self.mod.pulse.conj()[::-1]
+        self.i = 0
+
+    def processPayload(self, data):
+        print("got one")
+
+
+        pre = commons.Common.mod.getBasebandPreamble()
+
+        phaseSync = self.phaseSynchroniser.synchronisePhase(data)
+        def normalize(sig):
+            peak = max(abs(sig))  # get peak magnitude
+            return sig / peak if peak != 0 else sig
+
+        pre = normalize(pre)
+        phaseSync = normalize(phaseSync)
+
+        phaseSync = phaseSync[:len(pre)]
+
+        i = (self.config['preambleSymbols']+5) * self.config['samplesPerSymbol']
+
+        plt.plot(pre, 'g', label='clean preamble')
+        
+        plt.axvline(x=i, linestyle='--', linewidth=2, label='preamble end')
+
+        plt.plot(phaseSync, 'r', label='received signal')
+
+        plt.legend()
+        plt.title("Clean signal vs received signal")
+        plt.show()
+        
+
+
+
 delayDirac = 2500
 nbPlots = 2
 
-eyeSize = 200
+eyeSize = 500
 isiPlots = 4
 if __name__ == "__main__":
     match sys.argv[1]:
@@ -416,6 +491,14 @@ if __name__ == "__main__":
 
             plt.plot(corr)
             plt.show()
+
+        case "pre":
+            test =PreambleReceived()
+            test.rcv.listen()
+
+
+
+
 
         
 

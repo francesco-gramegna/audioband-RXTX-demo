@@ -167,7 +167,7 @@ class WavServerHandler(http.server.SimpleHTTPRequestHandler):
                 if text:
                     cmd.append(text)
 
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
 
                 if result.returncode != 0:
                     self.send_error(500, f"Script error: {result.stderr}")
