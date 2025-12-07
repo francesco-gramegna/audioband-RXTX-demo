@@ -15,17 +15,19 @@ import Modulator
 import plots
 
 
-def main():
+def main(param):
+
+
     config = Common.config
     mod = Common.mod
 
-    if len(sys.argv) == 1:
+    if len(param) == 1:
         wave = utils.generateFrequencySpan(config, mod)
         write("output.wav", config['FS'], wave.astype(np.float32))
         return
     
 
-    if(sys.argv[1] == 'dirac'):
+    if(param[1] == 'dirac'):
         common = EnvAnalysis.impulseResponseEstimator(EnvAnalysis.nbPlots, EnvAnalysis.delayDirac).Common
         config = common.config
         mod = common.mod
@@ -36,17 +38,17 @@ def main():
     
 
 
-    text = sys.argv[1]
+    text = param[1]
 
     config = Common.config
     mod = Common.mod
 
-    if(sys.argv[1] == 'alternating'):
+    if(param[1] == 'alternating'):
         wave = utils.modulateAlternatingBits(config,mod)
 
         write("output.wav", config['FS'], wave.astype(np.float32))
         return
-    if(sys.argv[1] == "sonar"):
+    if(param[1] == "sonar"):
         wave = utils.generateSonar(config, mod, EnvAnalysis.isiPlots, delay=0.5)
         write("output.wav", config['FS'], wave.astype(np.float32))
     
@@ -55,10 +57,10 @@ def main():
 
     bytesToSend = [ord(c) for c in stringToSend]
 
-    if(sys.argv[1] == 'eye'):
+    if(param[1] == 'eye'):
         bytesToSend = np.random.randint(0, 255, EnvAnalysis.eyeSize) 
 
-    if(sys.argv[1] == "image"):
+    if(param[1] == "image"):
         bytesToSend ,_ = ImageTest.image_to_pixel_bytes(ImageTest.path)
 
 
@@ -82,4 +84,8 @@ def main():
 
     
 
-main()
+if __name__ == "__main__":
+    main(sys.argv)
+
+
+

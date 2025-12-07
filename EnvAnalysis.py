@@ -1,3 +1,4 @@
+import ChannelSimulator
 import Synchronisation
 import Equalisation
 import TimeReceiver
@@ -274,7 +275,7 @@ class impulseResponseEstimator():
 
 
 class ChannelISIEstimator():
-    def __init__(self, nbEstimations):
+    def __init__(self, nbEstimations, fake=False):
 
         self.nbEstimation = nbEstimations
 
@@ -282,7 +283,12 @@ class ChannelISIEstimator():
         config = commons.Common.config
         self.config = config
         receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
-        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=1000) 
+
+        if( fake):
+            self.rcv = ChannelSimulator.EnvSimulateChannel(config, 'isi', receiver)
+        else:
+            self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=1000) 
+
         self.receiver = receiver
         self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
         self.MLAmplitudeSync = Synchronisation.MLAmplitudeSync(config, commons.Common.mod)
@@ -303,6 +309,10 @@ class ChannelISIEstimator():
             return
 
         phaseSync = self.phaseSynchroniser.synchronisePhase(data)
+
+        plt.plot(phaseSync)
+        plt.plot(self.phaseSynchroniser.preambuleMF.conj()[::-1])
+        plt.show()
         corr = fftconvolve(phaseSync, self.pulseMF)
         corr = corr[len(self.pulseMF) -1 :]
 
@@ -355,13 +365,20 @@ class ChannelISIEstimator():
 
 
 class EyeDiagram():
-    def __init__(self, window):
+    def __init__(self, window, fake=False):
         
         plt.rcParams.update({'font.size': 18})
         config = commons.Common.config
         self.config = config
         receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
-        self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=100) 
+
+        if fake:
+            self.rcv = ChannelSimulator.EnvSimulateChannel(config, 'eye', receiver)
+        else:
+
+            self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=100) 
+            
+
         self.receiver = receiver
 
         self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
@@ -461,8 +478,11 @@ class PreambleReceived:
 delayDirac = 2500
 nbPlots = 2
 
-eyeSize = 500
-isiPlots = 4
+eyeSize = 100
+isiPlots = 1
+
+
+ber = 10
 if __name__ == "__main__":
     match sys.argv[1]:
         case "psd":
@@ -475,10 +495,10 @@ if __name__ == "__main__":
             test =impulseResponseEstimator(2, delayDirac)
             test.rcv.listen()
         case "isi":
-            test =ChannelISIEstimator(isiPlots)
+            test =ChannelISIEstimator(isiPlots,fake=True)
             test.rcv.listen()
         case "eye":
-            test =EyeDiagram(3)
+            test =EyeDiagram(3, fake=True)
             test.rcv.listen()
 
         case "corr":

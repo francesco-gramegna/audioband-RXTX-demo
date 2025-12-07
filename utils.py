@@ -67,6 +67,8 @@ def modulateAlternatingBits(config, mod):
     return ret
 
 
+
+
 #ai generated
 def generate_zc_4qam_preamble(N, qam_constellation, root=1):
     """

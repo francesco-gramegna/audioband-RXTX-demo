@@ -35,7 +35,7 @@ class ChannelEstimator:
         self.X = X
         self.Xinv = np.linalg.pinv(X)
         self.Xc = X.conj()
-        #self.X1 = np.linalg.pinv(self.Xc.T @ X) 
+        self.X1 = np.linalg.pinv(self.Xc.T @ X) 
 
         #we regularise
         eps = 1e-4
@@ -47,7 +47,7 @@ class ChannelEstimator:
         except np.linalg.LinAlgError:
             X1 = np.linalg.pinv(A)
 
-        self.X1 = X1
+        #self.X1 = X1
 
 
     
@@ -71,7 +71,9 @@ class ChannelEstimator:
 
         y = data[self.L - 1:]
         #print(len(y))
-        p_hat = self.X1 @ (self.Xc.T @ y)
+        p_hat = self.Xinv @ y 
+
+        #p_hat = self.X1 @ (self.Xc.T @ y)
 
         y_predicted = self.X @ p_hat #the preamble I should have recieved
         e = y - y_predicted

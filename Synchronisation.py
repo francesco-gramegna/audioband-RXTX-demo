@@ -48,7 +48,6 @@ class TimeSynchroniser():
 
     def getPreambuleStartIndex(self, signal):
         #get energy of signal
-
         E_r = fftconvolve(np.abs(signal)**2, np.ones(self.M), mode='full')
 
         corr = fftconvolve(signal, self.preambuleMF, mode='full')
@@ -56,8 +55,7 @@ class TimeSynchroniser():
         corr_mag = np.abs(corr)
 
         rho = corr_mag / np.sqrt(self.E_h * np.maximum(E_r, 1e-12))
-        #rho = corr_mag
-
+        
         while(True):
             t_peak = np.argmax(rho)
             if(t_peak - (self.M - 1) < 0):
@@ -66,36 +64,43 @@ class TimeSynchroniser():
                 continue
             break
             
-
         #check if the peak is bigger than our threshold 
         if (rho[t_peak] >= self.config['corrRatioThresh']):
-
-            # now take all of those who are 5 % similar  to the max of them (arbitrary)
-            max_peak_index =  t_peak
-            max_peak_value = rho[max_peak_index]
-            potential_starts = []
+            
             tempRho = rho.copy()
-            while(len(potential_starts) < len(tempRho)):
-        
-                t_peak = np.argmax(tempRho)
-                if(t_peak - (self.M - 1) < 0):
-                    #previous peak , we skip it
-                    tempRho[t_peak] = 0
+            
+            while(True):
+                # Mask the area around the current peak
+                start_mask = max(0, t_peak - self.config['payloadSamples'])
+                end_mask = min(len(tempRho), t_peak + self.config['payloadSamples'])
+                tempRho[start_mask : end_mask] = 0
+                
+                new_peak = np.argmax(tempRho)
+                
+                # Check threshold
+                if tempRho[new_peak] < self.config['corrRatioThresh']:
+                    break
+                    
+                # Check valid index
+                if(new_peak - (self.M - 1) < 0):
+                    tempRho[new_peak] = 0
                     continue
 
-                if(tempRho[t_peak] < 0.95 * max_peak_value):
-                    break
-        
-                potential_starts.append(t_peak)
-                tempRho[t_peak] = 0
-        
-            t_peak = min(potential_starts)
-                    
-            #print('Detected preambule')
+                # If peak is to the right, mask it and search again
+                if new_peak > t_peak:
+                    start_r = max(0, new_peak - self.config['payloadSamples'])
+                    end_r = min(len(tempRho), new_peak + self['payloadSamples'])
+                    tempRho[start_r : end_r] = 0
+                    continue
+
+                # Found valid peak to the left
+                t_peak = new_peak
+                
             t_start = t_peak - (self.M - 1)
         
             return t_start, rho[t_peak]
         return -1, rho[t_peak]
+
 
 
 class MLPhaseSynchroniser():
