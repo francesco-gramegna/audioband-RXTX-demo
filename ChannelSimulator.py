@@ -22,6 +22,9 @@ class FakeChannel():
         fullData = fullData + np.random.normal(0, self.noise,size=len(fullData)) 
         processed = fftconvolve(fullData, self.ir)
 
+        processed = processed  * np.exp(1j * np.linspace(0, 2*np.pi, len(processed)))
+
+
         return processed
 
 
@@ -78,7 +81,7 @@ class SimulateChannel():
 #a class to facilitate the testing of EnvAnalysis classes
 class EnvSimulateChannel(SimulateChannel):
     def __init__(self, config,  name, sink):
-        channel = FakeChannel(delayIr(), noise=0.00)
+        channel = FakeChannel(easyIr(), noise=0.00)
 
         #generate the data
         TransmitterScript.main(['', name])

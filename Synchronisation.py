@@ -58,6 +58,8 @@ class TimeSynchroniser():
         
         while(True):
             t_peak = np.argmax(rho)
+            if(rho[t_peak] < self.config['corrRatioThresh']):
+                return -1, rho[t_peak]
             if(t_peak - (self.M - 1) < 0):
                 #previous peak , we skip it
                 rho[t_peak] = 0
@@ -66,7 +68,7 @@ class TimeSynchroniser():
             
         #check if the peak is bigger than our threshold 
         if (rho[t_peak] >= self.config['corrRatioThresh']):
-            
+
             tempRho = rho.copy()
             
             while(True):
@@ -132,6 +134,55 @@ class MLPhaseSynchroniser():
         return corrected
 
 
+class PLL():
+    def __init__(self, config, mod):
+        self.config = config
+
+        bits = utils.generatePreambleBits(config['preambleSymbols'], config['bitsPerSymbol'])
+        symbols = bits.reshape((-1, config['bitsPerSymbol']))
+        indices = symbols.dot(1 << np.arange(config['bitsPerSymbol']-1, -1, -1))
+
+        self.preambleSymbols = np.array(mod.constellation.map(indices))
+
+
+        self.theta = 0
+        self.K = self.config['pllK']
+
+    def solveAmbiguity(self, signal):
+        preamble_rx = signal[:len(self.preambleSymbols)]
+        ph = [0, np.pi/2, np.pi, 3*np.pi/2]
+    
+        scores = []
+        for phase in ph:
+            rotated = preamble_rx * np.exp(1j * phase)
+            score = np.real(np.sum(rotated * np.conj(self.preambleSymbols)))
+            scores.append(score)
+    
+        best_idx = np.argmax(scores)
+        print(scores)
+        return signal * np.exp(1j * ph[best_idx])
+
+    def syncPhase(self, signal):
+        phases = np.zeros(len(signal), dtype=float)
+    
+
+        for k in range(len(signal)):
+            # Mix down estimated phase
+            z = signal[k] * np.exp(-1j * self.theta)
+    
+            error = np.sign(np.real(z)) * np.imag(z) - np.sign(np.imag(z)) * np.real(z)
+    
+            self.theta += self.K * error
+            #self.theta = np.mod(self.theta, 2*np.pi)
+    
+            phases[k] = self.theta
+    
+        # Correct signal
+        signal = signal * np.exp(-1j * phases)
+        #signal = self.solveAmbiguity(signal)
+        return signal
+
+
 class MLAmplitudeSync():
     def __init__(self,config,mod):
         self.config = config
@@ -182,6 +233,10 @@ class MLFreqPhaseSynchroniser():
         phase = self.estimate_phase(sig_f_corr[:self.M])# residual phase
         corrected = sig_f_corr * np.exp(-1j * phase)    # remove phase
         return corrected
+
+
+
+    
 
 
 #ai gen

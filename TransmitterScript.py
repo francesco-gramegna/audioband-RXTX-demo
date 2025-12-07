@@ -53,6 +53,7 @@ def main(param):
         write("output.wav", config['FS'], wave.astype(np.float32))
     
     total = []
+    total2 = []
     stringToSend = text 
 
     bytesToSend = [ord(c) for c in stringToSend]
@@ -74,13 +75,16 @@ def main(param):
         while(len(window) < config['bytesPerWindow']):
             window = np.append(window, 0)
 
-        _, passband = mod.modulateWindow(window)
+        baseband, passband = mod.modulateWindow(window)
 
         total = np.concatenate([total,np.zeros((int(0.05 * 48000))) ,passband])
+        total2 = np.concatenate([total2,baseband])
 
 
 
     write("output.wav", config['FS'], total.astype(np.float32))
+
+    np.save('baseband.npy', total2)
 
     
 

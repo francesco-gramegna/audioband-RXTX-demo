@@ -72,7 +72,7 @@ class TimeReceiver():
 
                 #print("corr time : ", time.time() - stime)
 
-                #print(peak)
+                print(peak)
                 if (preambuleIndex != -1):
                     self.state = 'POTENTIAL_PACKET'
             

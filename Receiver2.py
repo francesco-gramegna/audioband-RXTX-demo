@@ -16,8 +16,10 @@ class Receiver():
         self.config = config
         self.mod = mod
         self.demod = demod
+
         treceiver = TimeReceiver.TimeReceiver(config, mod, demod, True, self.processPayload)
         self.rcv =  AudioReceiver.AudioReceiver(self.config, treceiver) 
+
         self.callback = callback
         self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, mod)
         self.MLAmplitudeSync = Synchronisation.MLAmplitudeSync(config, mod)
@@ -37,12 +39,12 @@ class Receiver():
         corr = fftconvolve(phaseSync, self.pulseMF)
         corr = corr[len(self.pulseMF) -1 :]
         
-        best_phase , _ = self.bestSamplingSync.findOptimalSamplingPhase(corr)
+        #best_phase , _ = self.bestSamplingSync.findOptimalSamplingPhase(corr)
         #print("Best phase : ", best_phase)
-        if best_phase > self.config["samplesPerSymbol"]:
-            best_phase = 0
+        #if best_phase > self.config["samplesPerSymbol"]:
+        #    best_phase = 0
 
-        #best_phase = 0
+        best_phase = 0
 
         corr = corr[best_phase::self.config["samplesPerSymbol"]]
         #estimate the channel

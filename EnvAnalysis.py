@@ -9,6 +9,7 @@ import AudioReceiver
 from scipy.signal import welch
 import numpy as np
 from scipy.signal import savgol_filter , fftconvolve
+from scipy.io import wavfile
 
 
 class PSDVisualizer():
@@ -285,7 +286,7 @@ class ChannelISIEstimator():
         receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
 
         if( fake):
-            self.rcv = ChannelSimulator.EnvSimulateChannel(config, 'isi', receiver)
+            self.rcv = ChannelSimulator.EnvSimulateChannel(config, 'h', receiver)
         else:
             self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=1000) 
 
@@ -316,7 +317,8 @@ class ChannelISIEstimator():
         corr = fftconvolve(phaseSync, self.pulseMF)
         corr = corr[len(self.pulseMF) -1 :]
 
-        best_phase , _ = self.bestSamplingSync.findOptimalSamplingPhase(corr)
+        #best_phase , _ = self.bestSamplingSync.findOptimalSamplingPhase(corr)
+        best_phase = 0
 
         #samples at symbols
         #corr = corr[len(self.pulseMF)-1:]
@@ -468,10 +470,89 @@ class PreambleReceived:
 
         plt.plot(phaseSync, 'r', label='received signal')
 
+        plt.xlabel("Time (s)")
+
         plt.legend()
         plt.title("Clean signal vs received signal")
+
         plt.show()
         
+
+
+class driftingPhase():
+    def __init__(self, fake=False):
+        plt.rcParams.update({'font.size': 18})
+
+        config = commons.Common.config
+        self.config = config
+
+        receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
+
+        if( fake):
+            self.rcv = ChannelSimulator.EnvSimulateChannel(config, 'isi', receiver)
+        else:
+            self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=1000) 
+
+
+
+        self.receiver = receiver
+        self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
+    
+        self.pll = Synchronisation.PLL(config, commons.Common.mod)
+
+        self.MLAmplitudeSync = Synchronisation.MLAmplitudeSync(config, commons.Common.mod)
+
+        self.mod = commons.Common.mod
+
+        self.pulseMF = self.mod.pulse.conj()[::-1]
+        self.i = 0
+
+    def processPayload(self, data):
+        print("got one")
+
+        pre = np.load("baseband.npy")
+        
+
+        phaseSync = self.phaseSynchroniser.synchronisePhase(data)
+
+
+        def normalize(sig):
+            peak = max(abs(sig))  # get peak magnitude
+            return sig / peak if peak != 0 else sig
+
+        phaseSync = fftconvolve(phaseSync, self.pulseMF)
+        pre = fftconvolve(pre, self.pulseMF)
+
+        pre = pre[::self.config['samplesPerSymbol']]
+        phaseSync = phaseSync[::self.config['samplesPerSymbol']]
+
+        pllSync = self.pll.syncPhase(phaseSync)
+
+        #pllSync = self.phaseSynchroniser.synchronisePhase(pllSync)
+
+        phaseSync = phaseSync[:len(pre)]
+
+        pre = normalize(pre)
+
+        phaseSync = normalize(phaseSync)
+        pllSync = normalize(pllSync)
+
+
+        i = (self.config['preambleSymbols']+5) * self.config['samplesPerSymbol']
+
+        plt.plot(np.angle(pre), 'g', label='clean preamble phase')
+        #plt.axvline(x=i, linestyle='--', linewidth=2, label='preamble end')
+        plt.plot(np.angle(phaseSync) ,'r', label='phase sync phase', alpha=0.7)
+        plt.plot(np.angle(pllSync) ,'b', label='phase sync + pll phase', alpha=0.7)
+
+        plt.xlabel("Symbol index")
+        plt.ylabel("Phase (wrapped)")
+        plt.legend()
+        plt.title("Complex envelope phase at 200 symbols/s")
+        plt.show()
+        
+
+
 
 
 
@@ -516,11 +597,10 @@ if __name__ == "__main__":
             test =PreambleReceived()
             test.rcv.listen()
 
+        case "pll":
+            test =driftingPhase(fake=False)
+            test.rcv.listen()
 
-
-
-
-        
 
 
 
