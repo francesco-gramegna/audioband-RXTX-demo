@@ -78,14 +78,40 @@ class WavServerHandler(http.server.SimpleHTTPRequestHandler):
     </style>
 </head>
 <body>
+<audio id="wakelockAudio" loop playsinline>
+    <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" type="audio/wav">
+</audio>
     <h1>Text to WAV Generator</h1>
     <textarea id="textInput" placeholder="Enter your text here..."></textarea>
     <button onclick="generateWav()">Generate WAV</button>
     <button onclick="generateFrequencySpan()">Generate Frequency Span</button>
     <div id="status"></div>
     <audio id="player" controls style="display:none;"></audio>
-
     <script>
+let wakelockActive = false;
+
+async function enableWakeLock() {
+    if (wakelockActive) return;
+
+    const audio = document.getElementById("wakelockAudio");
+
+    try {
+        await audio.play();
+        wakelockActive = true;
+        console.log("iOS screen wake-lock ACTIVE.");
+    } catch (err) {
+        console.log("Wake-lock pending user interaction:", err);
+    }
+}
+
+// Safari requires a user gesture first
+document.addEventListener("click", enableWakeLock);
+document.addEventListener("touchstart", enableWakeLock);
+
+// Try once immediately (may fail until interaction)
+enableWakeLock();
+
+
         async function generateWav() {
             const text = document.getElementById('textInput').value;
             if (!text.trim()) {

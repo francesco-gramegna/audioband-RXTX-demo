@@ -26,6 +26,11 @@ class Receiver():
 
         self.bestSamplingSync = Synchronisation.SymbolTimingSynchroniser(config, Common.mod)
 
+        self.pll1 = Synchronisation.PLL(config, Common.mod, 0.05)
+        self.pll2 = Synchronisation.PLL(config, Common.mod, 0.5)
+        self.pll3 = Synchronisation.PLL(config, Common.mod, 1)
+        self.pll4 = Synchronisation.PLL(config, Common.mod, 3)
+
         self.channelEst = Equalisation.ChannelEstimator(config, mod)
 
         self.channelEq = Equalisation.MMSEEqualizer(config, mod)
@@ -54,6 +59,11 @@ class Receiver():
         if sig_power > 0:
             corr = corr / np.sqrt(sig_power)
 
+        
+        corr1 = self.pll1.syncPhase(corr)
+        corr2 = self.pll2.syncPhase(corr)
+        corr3 = self.pll3.syncPhase(corr)
+        corr4 = self.pll4.syncPhase(corr)
 
         #try:
             #p,n0 = self.channelEst.estimateChannel(corr)
@@ -98,6 +108,10 @@ class Receiver():
         window = self.config['windowLenghtSymbols']
 
         csym = corr[pre_len: pre_len + window]
+        csym1 = corr1[pre_len: pre_len + window]
+        csym2 = corr2[pre_len: pre_len + window]
+        csym3 = corr3[pre_len: pre_len + window]
+        csym4 = corr4[pre_len: pre_len + window]
 
         #delta = self.channelEq.delta
         #ysym = y[delta  : delta + window]
@@ -110,12 +124,15 @@ class Receiver():
         #print(len(ysym))
         #print(self.config['bytesPerWindow'])
 
-        bits = self.demod.demodulateSampled(csym)
+        bits = self.demod.demodulateSampled(csym1)
+        bits = self.demod.demodulateSampled(csym2)
+        bits = self.demod.demodulateSampled(csym3)
+        bits = self.demod.demodulateSampled(csym4)
 
         
         self.callback(bits)
 
-        #self.demod.demodulateSampled(ysym)
+        #self.demod.demodulateSampled(ys17000ym)
 
         #print(utils.generatePreambleBits(self.config['preambleSymbols'] * 2, 2))
 

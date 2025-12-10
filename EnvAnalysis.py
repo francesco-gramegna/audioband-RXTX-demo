@@ -1,3 +1,8 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+
+
 import ChannelSimulator
 import Synchronisation
 import Equalisation
@@ -499,6 +504,8 @@ class driftingPhase():
         self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
     
         self.pll = Synchronisation.PLL(config, commons.Common.mod)
+        self.bestSamplingSync = Synchronisation.SymbolTimingSynchroniser(config, commons.Common.mod)
+
 
         self.MLAmplitudeSync = Synchronisation.MLAmplitudeSync(config, commons.Common.mod)
 
@@ -515,7 +522,6 @@ class driftingPhase():
 
         phaseSync = self.phaseSynchroniser.synchronisePhase(data)
 
-
         def normalize(sig):
             peak = max(abs(sig))  # get peak magnitude
             return sig / peak if peak != 0 else sig
@@ -523,39 +529,40 @@ class driftingPhase():
         phaseSync = fftconvolve(phaseSync, self.pulseMF)
         pre = fftconvolve(pre, self.pulseMF)
 
-        pre = pre[::self.config['samplesPerSymbol']]
-        phaseSync = phaseSync[::self.config['samplesPerSymbol']]
+        phaseSync = phaseSync[len(self.pulseMF) - 1:]
+        pre = pre[len(self.pulseMF) - 1:]
 
+        pre = pre[::self.config['samplesPerSymbol']]
+
+        best_phase , _ = self.bestSamplingSync.findOptimalSamplingPhase(phaseSync)
+        phaseSync = phaseSync[best_phase::self.config['samplesPerSymbol']]
+
+
+        phaseSync = phaseSync[:len(pre) - 16]
         pllSync = self.pll.syncPhase(phaseSync)
 
-        #pllSync = self.phaseSynchroniser.synchronisePhase(pllSync)
+        #pllSync = self.phaseSynchroniser.synchronisePhase(pllSync      
 
-        phaseSync = phaseSync[:len(pre)]
+        pre = pre[:-16]
 
-        pre = normalize(pre)
+        start = self.config['preambleSymbols'] + 8 + 7
+        start = 0
+        pre = normalize(pre[start:])
 
-        phaseSync = normalize(phaseSync)
-        pllSync = normalize(pllSync)
-
+        phaseSync = normalize(phaseSync[start:])
+        pllSync = normalize(pllSync[start:]) 
 
         i = (self.config['preambleSymbols']+5) * self.config['samplesPerSymbol']
-
-        plt.plot(np.angle(pre), 'g', label='clean preamble phase')
         #plt.axvline(x=i, linestyle='--', linewidth=2, label='preamble end')
-        plt.plot(np.angle(phaseSync) ,'r', label='phase sync phase', alpha=0.7)
-        plt.plot(np.angle(pllSync) ,'b', label='phase sync + pll phase', alpha=0.7)
+        plt.plot(np.angle(phaseSync) ,'r', label='ML phase sync', alpha=0.7, lw=3)
+        plt.plot(np.angle(pllSync) ,color='#8000FF', label='ML phase sync + pll', alpha=0.7, lw=3)
 
-        plt.xlabel("Symbol index")
-        plt.ylabel("Phase (wrapped)")
-        plt.legend()
-        plt.title("Complex envelope phase at 200 symbols/s")
-        plt.show()
-        
+        plt.plot(np.angle(pre), 'g', label='expected phase', lw=3, ls="--")
 
+        plt.show() 
 
-
-
-
+     
+    
 delayDirac = 2500
 nbPlots = 2
 

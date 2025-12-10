@@ -91,7 +91,7 @@ class TimeSynchroniser():
                 # If peak is to the right, mask it and search again
                 if new_peak > t_peak:
                     start_r = max(0, new_peak - self.config['payloadSamples'])
-                    end_r = min(len(tempRho), new_peak + self['payloadSamples'])
+                    end_r = min(len(tempRho), new_peak + self.config['payloadSamples'])
                     tempRho[start_r : end_r] = 0
                     continue
 
@@ -134,8 +134,9 @@ class MLPhaseSynchroniser():
         return corrected
 
 
+
 class PLL():
-    def __init__(self, config, mod):
+    def __init__(self, config, mod, K= None):
         self.config = config
 
         bits = utils.generatePreambleBits(config['preambleSymbols'], config['bitsPerSymbol'])
@@ -144,9 +145,9 @@ class PLL():
 
         self.preambleSymbols = np.array(mod.constellation.map(indices))
 
-
         self.theta = 0
-        self.K = self.config['pllK']
+        self.K = self.config['pllK'] if K == None else K
+
 
     def solveAmbiguity(self, signal):
         preamble_rx = signal[:len(self.preambleSymbols)]
@@ -160,29 +161,72 @@ class PLL():
     
         best_idx = np.argmax(scores)
         print(scores)
-        return signal * np.exp(1j * ph[best_idx])
+        return signal * np.exp(1j * ph[(best_idx)])
 
     def syncPhase(self, signal):
         phases = np.zeros(len(signal), dtype=float)
-    
 
+        self.theta = 0
+        #self.theta = np.angle(self.preambleSymbols[0])
+        #self.theta = np.angle(signal[0])
+
+        signal = self.solveAmbiguity(signal)
+       
         for k in range(len(signal)):
-            # Mix down estimated phase
             z = signal[k] * np.exp(-1j * self.theta)
     
             error = np.sign(np.real(z)) * np.imag(z) - np.sign(np.imag(z)) * np.real(z)
     
             self.theta += self.K * error
-            #self.theta = np.mod(self.theta, 2*np.pi)
     
             phases[k] = self.theta
     
         # Correct signal
         signal = signal * np.exp(-1j * phases)
-        #signal = self.solveAmbiguity(signal)
+        plt.plot(np.angle(self.preambleSymbols), 'c')
         return signal
+    """
+    def syncPhase(self, signal):
+        phases = np.zeros(len(signal), dtype=float)
+
+        signal = self.solveAmbiguity(signal)
+        residual_phase = np.angle(signal[0] / self.preambleSymbols[0])
+        preamble_z = signal[0:5] * np.conj(self.preambleSymbols[0:5])
+        initial_phase = np.angle(np.sum(preamble_z))
+
+        self.theta = initial_phase
 
 
+        # Reset integrator at the start of sync
+        self.integral = 0
+        
+        
+        for k in range(len(signal)):
+            z = signal[k] * np.exp(-1j * self.theta)
+            
+            # Assuming z = signal[k] * np.exp(-1j * self.theta) is calculated as before
+
+            # 1. Fourth Power Operation
+            z_fourth = z**4 
+
+            # 2. Extract and Scale the Phase Error
+            # The phase of z_fourth is 4 * phi_error. We divide by 4.
+            error = np.angle(z_fourth) / 4.0
+
+            # 3. Apply the PI Filter and NCO Update (using K1, K2 from the 2nd-order loop)
+            self.integral += error
+            self.theta += self.K1 * error + self.K2 * self.integral
+
+            #MAX_ERROR = 0.5 
+            #error = np.clip(error, -MAX_ERROR, MAX_ERROR)
+            phases[k] = self.theta
+            
+        # Correct signal
+        signal = signal * np.exp(-1j * phases)
+        return signal
+    """
+    
+    
 class MLAmplitudeSync():
     def __init__(self,config,mod):
         self.config = config
