@@ -64,6 +64,13 @@ def main(param):
     if(param[1] == "image"):
         bytesToSend ,_ = ImageTest.image_to_pixel_bytes(ImageTest.path)
 
+    if(param[1] == "ber"):
+        bytesToSend ,_ = EnvAnalysis.getPhrase()
+
+        bytesToSend = np.concatenate([bytesToSend, bytesToSend, bytesToSend, bytesToSend, bytesToSend, bytesToSend, bytesToSend,bytesToSend, bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend,bytesToSend])
+        
+
+
 
     #partition into differnet payloads
 

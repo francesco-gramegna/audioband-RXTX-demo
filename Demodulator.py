@@ -22,7 +22,7 @@ class Demodulator():
     
         bits = bits.flatten()
         bytes_array = np.packbits(bits)
-        print(bytes(bytes_array).decode(errors='replace'), end="", flush=True)
+        #print(bytes(bytes_array).decode(errors='replace'), end="", flush=True)
         
         if(debug):
             print()

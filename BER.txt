@@ -1,0 +1,29 @@
+0.3005769230769231 , 10400 bits (no preamble) , fc = 1000, rs = 200, pre = 31, window = 160 , dist = 10cm
+
+0.3644230769230769, 20800 bits, fc = 10000, rs = 1000, pre = 227, window = 800, dist = 10cm
+
+0.2873161764705882, 10880 bits, fc = 18000, rs = 500, pre=127, window = 160, dist = 10cm , a bit audible though
+
+0.2838768115942029, 11040 bits, fc = 19000, rs = 500, pre = 63, windwo = 160, dist 10cm, not audible for me
+
+
+
+0.3233208955223881, 10400 bits,fc = 1000, rs = 200, pre = 31, window = 160 , dist = 1m
+
+0.08553571428571428, 33600 bits, fc = 10000, rs = 2000, pre = 227, window = 800, dist = 1
+
+0.19027777777777777, 43200 bits, fc = 10000, rs = 3000, pre = 227, window = 1600 dist = 1
+
+0.3743948412698413, 100800 bits, fc = 12000, rs = 5000, pre  551, window = 2400, dist = 1
+
+0.34626865671641793, 16080 bits, fc = 19000, rs = 500, pre = 127, window = 240
+
+0.4926418439716312, 11280 bits, fc = 19000, rs = 500, pre=127, window = 380 ; notice the need for a pll
+
+0.18795289855072464, 2240 bits, fc = 19000, rs = 100, pre =7, window = 32
+
+0.33203125,  1720 bits, fc = 20000, rs = 100, pre = 7, window = 32  
+
+0.17100694444444445, 1280 bits, fc = 22000, pre = 7, window = 32	
+
+

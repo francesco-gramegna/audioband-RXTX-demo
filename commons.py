@@ -37,14 +37,14 @@ class Common():
 
     config = {'FS' : 48000,
               'FC' : 1000,
-              'RS' : 200,
-              'preambleSymbols' : 67,
-              'windowLenghtSymbols' :64 ,
-              'corrRatioThresh' : 0.50, #very  ery low snr
-              'excessBandwidth': 0.50,
+              'RS' : 100,
+              'preambleSymbols' : 31,
+              'windowLenghtSymbols' :8,
+              'corrRatioThresh' : 0.30, #very  ery low snr
+              'excessBandwidth': 0.10,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,
-              'Eb': 1000,
+              'Eb': 10000,
               'channelTMax' : 0.05, #in seconds
               'pllK' : 0.02 #how  fast the pll converges
               }

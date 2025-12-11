@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-
 import ChannelSimulator
 import Synchronisation
 import Equalisation
@@ -561,6 +560,99 @@ class driftingPhase():
 
         plt.show() 
 
+
+ 
+def getPhrase():
+    l = commons.Common.config['windowLenghtSymbols'] // 8     
+
+    np.random.seed(12091)
+
+    random_bytes = np.random.randint(
+    low=0, 
+    high=256, 
+    size=l,
+    dtype=np.uint8
+    )
+    bit_array = np.unpackbits(random_bytes)
+
+    return random_bytes, bit_array
+
+
+
+class BER():
+   
+    def __init__(self, fake=False):
+        plt.rcParams.update({'font.size': 18})
+
+        config = commons.Common.config
+        self.config = config
+
+        receiver = TimeReceiver.TimeReceiver(config, commons.Common.mod, commons.Common.demod, True, self.processPayload)
+
+        if( fake):
+            self.rcv = ChannelSimulator.EnvSimulateChannel(config, 'ber', receiver)
+        else:
+            self.rcv =  AudioReceiver.AudioReceiver(self.config, receiver, cycles=1000) 
+
+        self.receiver = receiver
+        self.phaseSynchroniser = Synchronisation.MLPhaseSynchroniser(config, commons.Common.mod)
+    
+        self.bestSamplingSync = Synchronisation.SymbolTimingSynchroniser(config, commons.Common.mod)
+
+        self.MLAmplitudeSync = Synchronisation.MLAmplitudeSync(config, commons.Common.mod)
+
+        self.mod = commons.Common.mod
+
+        self.pulseMF = self.mod.pulse.conj()[::-1]
+        self.demod = commons.Common.demod
+
+        self.i = 0
+
+        self.total = 0
+        self.wrong = 0
+
+        _ , self.bits = getPhrase()
+
+    def processPayload(self, data):
+        pre = np.load("baseband.npy")
+
+        phaseSync = self.phaseSynchroniser.synchronisePhase(data)
+
+        def normalize(sig):
+            peak = max(abs(sig))  # get peak magnitude
+            return sig / peak if peak != 0 else sig
+
+        phaseSync = fftconvolve(phaseSync, self.pulseMF)
+        pre = fftconvolve(pre, self.pulseMF)
+
+        phaseSync = phaseSync[len(self.pulseMF) - 1:]
+        pre = pre[len(self.pulseMF) - 1:]
+
+        pre = pre[::self.config['samplesPerSymbol']]
+
+        best_phase , _ = self.bestSamplingSync.findOptimalSamplingPhase(phaseSync)
+        phaseSync = phaseSync[best_phase::self.config['samplesPerSymbol']]
+
+        pre_len = self.config['preambleSymbols']
+        window = self.config['windowLenghtSymbols']
+
+        csym = phaseSync[pre_len: pre_len + window]
+
+        bits = self.demod.demodulateSampled(csym)
+
+
+        for b,r in zip(self.bits, bits):
+            self.total+=1
+            if( b != r):
+                self.wrong += 1
+
+        print("BER : " + str(self.wrong/self.total))
+        print('total bits : ', self.total)
+
+
+
+
+
      
     
 delayDirac = 2500
@@ -571,6 +663,8 @@ isiPlots = 1
 
 
 ber = 10
+
+berCycles = 100
 if __name__ == "__main__":
     match sys.argv[1]:
         case "psd":
@@ -607,6 +701,13 @@ if __name__ == "__main__":
         case "pll":
             test =driftingPhase(fake=False)
             test.rcv.listen()
+
+        case "ber":
+            test =BER(fake=False)
+            test.rcv.listen()
+
+
+
 
 
 
