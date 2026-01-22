@@ -20,6 +20,8 @@ class FakeChannel():
     def process(self, fullData):
 
         fullData = fullData + np.random.normal(0, self.noise,size=len(fullData)) 
+        print(fullData.shape)
+        print(self.ir.shape)
         processed = fftconvolve(fullData, self.ir)
 
         processed = processed  * np.exp(1j * np.linspace(0, 2*np.pi, len(processed)))

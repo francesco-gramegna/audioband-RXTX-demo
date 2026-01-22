@@ -36,11 +36,11 @@ class CommonDynamic():
 class Common():
 
     config = {'FS' : 48000,
-              'FC' : 1000,
-              'RS' : 100,
-              'preambleSymbols' : 31,
+              'FC' : 10000,
+              'RS' : 2000,
+              'preambleSymbols' :  	991,
               'windowLenghtSymbols' :8,
-              'corrRatioThresh' : 0.30, #very  ery low snr
+              'corrRatioThresh' : 0.40, #very  ery low snr
               'excessBandwidth': 0.10,
               'lpCutoffEpsilon': 0.05,
               'bitsPerSymbol' : 2,
@@ -50,7 +50,7 @@ class Common():
               }
 
     #config['channelSymbolsLen'] =  math.ceil(config['channelTMax'] * config['RS']) + 1
-    config['channelSymbolsLen'] = 15
+    config['channelSymbolsLen'] = 15 #was 15
 
     
     pulse = mathUtils.rrc_pulse(config['FS'], config['RS'], alpha=0.25)

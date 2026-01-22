@@ -315,14 +315,14 @@ class ChannelISIEstimator():
 
         phaseSync = self.phaseSynchroniser.synchronisePhase(data)
 
-        plt.plot(phaseSync)
-        plt.plot(self.phaseSynchroniser.preambuleMF.conj()[::-1])
-        plt.show()
+        #plt.plot(phaseSync)
+        #plt.plot(self.phaseSynchroniser.preambuleMF.conj()[::-1])
+        #plt.show()
         corr = fftconvolve(phaseSync, self.pulseMF)
         corr = corr[len(self.pulseMF) -1 :]
 
-        #best_phase , _ = self.bestSamplingSync.findOptimalSamplingPhase(corr)
-        best_phase = 0
+        best_phase , _ = self.bestSamplingSync.findOptimalSamplingPhase(corr)
+        #best_phase = 0
 
         #samples at symbols
         #corr = corr[len(self.pulseMF)-1:]
@@ -651,15 +651,11 @@ class BER():
 
 
 
-
-
-     
-    
 delayDirac = 2500
 nbPlots = 2
 
 eyeSize = 100
-isiPlots = 1
+isiPlots = 4
 
 
 ber = 10
@@ -677,7 +673,7 @@ if __name__ == "__main__":
             test =impulseResponseEstimator(2, delayDirac)
             test.rcv.listen()
         case "isi":
-            test =ChannelISIEstimator(isiPlots,fake=True)
+            test =ChannelISIEstimator(isiPlots,fake=False)
             test.rcv.listen()
         case "eye":
             test =EyeDiagram(3, fake=True)
