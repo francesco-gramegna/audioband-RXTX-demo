@@ -49,7 +49,8 @@ def main(param):
         write("output.wav", config['FS'], wave.astype(np.float32))
         return
     if(param[1] == "sonar"):
-        wave = utils.generateSonar(config, mod, EnvAnalysis.isiPlots, delay=3)
+        #wave = utils.generateSonar(config, mod, EnvAnalysis.isiPlots, delay=0.25)
+        wave = utils.generateSonar(config, mod, 40, delay=0.05)
         write("output.wav", config['FS'], wave.astype(np.float32))
         return
     

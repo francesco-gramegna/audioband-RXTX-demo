@@ -10,9 +10,129 @@ import matplotlib.pyplot as plt
 import Synchronisation
 import numpy as np
 import utils
-from scipy.signal import decimate, upfirdn # Added upfirdn
+from scipy.signal import decimate, upfirdn
 
 from scipy.linalg import toeplitz
+
+
+class LMSChannelEstimator:
+    def __init__(self, config, mod):
+        self.config = config
+        self.L = config['channelSymbolsLen']
+
+        bits = utils.generatePreambleBits(config['preambleSymbols'], config['bitsPerSymbol'])
+        symbols = bits.reshape((-1, config['bitsPerSymbol']))
+        indices = symbols.dot(1 << np.arange(config['bitsPerSymbol']-1, -1, -1))
+
+        self.preambleSymbols = np.array(mod.constellation.map(indices))
+        
+
+        self.e = np.zeros(self.L)
+        self.h = np.zeros(self.L, np.complex128)
+
+
+    #data is already matched filtered and sampled
+    
+    
+    def estimateChannel(self, data):
+
+        x = self.preambleSymbols
+        d = data
+
+        N = self.L
+        step_size = 0.5   # NLMS allows sane values
+
+        h = self.h.copy()
+
+        L = min(len(x), len(d))
+        e = np.zeros(L, dtype=np.complex128)
+
+        for n in range(N, L):
+            x_vec = x[n-N+1:n+1][::-1]
+
+            y_hat = np.dot(h, x_vec)
+            e[n] = d[n] - y_hat
+
+            norm = np.dot(x_vec, x_vec) + 1e-12
+            h += step_size * e[n] * x_vec / norm
+
+        self.h = h
+        return h, e[N:]
+
+class LSChannelEstimator:
+    def __init__(self, config, mod):
+        self.config = config
+        self.L = config['channelSymbolsLen']
+        self.preamble = mod.getBasebandPreamble()
+
+        if(self.L >= len(self.preamble)):
+            raise ValueError("Then channel memory should be smaller than the preamble for good estimation!")
+
+        self.freqPreamble = np.fft.fft(self.preamble)
+
+    #data is not matched or sampled
+    def estimateChannelBaseband(self, data):
+        y = data[:len(self.freqPreamble)]
+        Y = np.fft.fft(y)
+        X = self.freqPreamble
+        # Y = HX + N
+        Hdirty = Y/X
+
+        #we perform a small correction
+        hdirty = np.fft.ifft(Hdirty)
+        #hdirty[np.where(i > self.L)] = 0
+
+        hest = hdirty
+        hest = hest[:self.L]
+
+        return hest, 0
+
+
+
+class OldChannelEstimator:
+    def __init__(self, config, mod):
+        self.config = config
+        self.L = config['channelSymbolsLen']
+
+        bits = utils.generatePreambleBits(config['preambleSymbols'], config['bitsPerSymbol'])
+        symbols = bits.reshape((-1, config['bitsPerSymbol']))
+        indices = symbols.dot(1 << np.arange(config['bitsPerSymbol']-1, -1, -1))
+
+        self.preambleSymbols = np.array(mod.constellation.map(indices))
+        
+        self.preamble = mod.getBasebandPreamble()
+
+        if(self.L >= len(self.preambleSymbols)):
+            raise ValueError("Then channel memory should be smaller than the preamble for good estimation!")
+
+        X = self.build_convolution_matrix()
+        self.Xinv = np.linalg.pinv(X)
+        self.Xc = X.conj()
+        self.X1 = np.linalg.pinv(self.Xc.T @ X) 
+
+    
+    def build_convolution_matrix(self):
+        x = self.preambleSymbols
+        N = len(x)
+        L = self.L
+
+        rows = N - L + 1
+        X = np.zeros((rows, L), dtype=complex)
+
+        for i in range(rows):
+            X[i, :] = x[i:i+L][::-1] 
+
+        return X
+
+    #data is already matched filtered and sampled
+    def estimateChannel(self, data):
+
+        data = data[:len(self.preambleSymbols)]
+
+        y = data[self.L - 1: len(self.preambleSymbols)]
+        p_hat = self.X1 @ (self.Xc.T @ y)
+        return p_hat, 0
+
 
 
 class ChannelEstimator:
@@ -31,7 +151,7 @@ class ChannelEstimator:
         if(self.L >= len(self.preambleSymbols)):
             raise ValueError("Then channel memory should be smaller than the preamble for good estimation!")
 
-        X = self.build_convolution_matrix()
+        X = self.build_convolution_matrix(self.preambleSymbols)
         self.X = X
         self.Xinv = np.linalg.pinv(X)
         self.Xc = X.conj()
@@ -52,8 +172,7 @@ class ChannelEstimator:
 
 
     
-    def build_convolution_matrix(self):
-        x = self.preambleSymbols
+    def build_convolution_matrix(self, x):
         N = len(x)
         L = self.L
 
@@ -64,6 +183,7 @@ class ChannelEstimator:
             X[i, :] = x[i:i+L][::-1] 
 
         return X
+
 
     #data is already matched filtered and sampled
     def estimateChannel(self, data):
@@ -88,6 +208,7 @@ class ChannelEstimator:
             noise_var = np.sum(np.abs(e)**2) / (len_e - self.L)
 
         return p_hat, noise_var
+
 
 
 class MMSEEqualizer:
@@ -123,4 +244,10 @@ class MMSEEqualizer:
         y_hat = y_full[self.delta : self.delta + len(data)]
 
         return y_hat, w
+
+
+
+
+
+
 

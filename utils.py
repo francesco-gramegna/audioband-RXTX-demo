@@ -52,7 +52,7 @@ def generateSonar(config, mod, cycles, delay):
     sound = np.sin(2 * np.pi * 400 / config['FS'] * t) * 0.005
        
     for c in range(cycles):
-        total = np.concatenate([total, sound, delayArr, pre ,delayArr])
+        total = np.concatenate([total, pre ,delayArr])
         
     return total 
 

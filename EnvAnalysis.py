@@ -655,7 +655,7 @@ delayDirac = 2500
 nbPlots = 2
 
 eyeSize = 100
-isiPlots = 4
+isiPlots = 1
 
 
 ber = 10
@@ -673,7 +673,7 @@ if __name__ == "__main__":
             test =impulseResponseEstimator(2, delayDirac)
             test.rcv.listen()
         case "isi":
-            test =ChannelISIEstimator(isiPlots,fake=False)
+            test =ChannelISIEstimator(isiPlots,fake=True)
             test.rcv.listen()
         case "eye":
             test =EyeDiagram(3, fake=True)
