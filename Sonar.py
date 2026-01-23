@@ -35,7 +35,7 @@ class SimpleSonar():
 
         self.bestSamplingSync = Synchronisation.SymbolTimingSynchroniser(config, commons.Common.mod)
 
-        self.channelEst = Equalisation.OldChannelEstimator(config, commons.Common.mod)
+        self.channelEst = Equalisation.ChannelEstimator(config, commons.Common.mod)
         self.mod = commons.Common.mod
 
         self.pulseMF = self.mod.pulse.conj()[::-1]
@@ -53,13 +53,12 @@ class SimpleSonar():
         phaseSync = self.phaseSynchroniser.synchronisePhase(data)
 
 
-        corr = fftconvolve(phaseSync, self.pulseMF)
+        corr = fftconvolve(phaseSync, self.pulseMF,mode='full')
         corr = corr[len(self.pulseMF) - 1:]
 
-        best_phase, _ = self.bestSamplingSync.findOptimalSamplingPhase(corr)
 
         # samples at symbols
-        corr = corr[best_phase::self.config["samplesPerSymbol"]]
+        corr = corr[::self.config["samplesPerSymbol"]]
 
         try:
             p, n0 = self.channelEst.estimateChannel(corr)

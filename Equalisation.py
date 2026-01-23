@@ -190,7 +190,7 @@ class ChannelEstimator:
 
         data = data[:len(self.preambleSymbols)]
 
-        y = data[self.L - 1:]
+        y = data[self.L - 1:len(self.preambleSymbols)]
         #print(len(y))
         #p_hat = self.Xinv @ y 
         #p_hat = self.X1 @ y 
